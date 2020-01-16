@@ -44,17 +44,31 @@ namespace FractalService
         [DllImport("advapi32.dll", SetLastError = true)]
         private static extern bool SetServiceStatus(System.IntPtr handle, ref ServiceStatus serviceStatus);
 
-        public FractalService()
+        public FractalService(string[] args)
         {
             InitializeComponent();
-            eventLog1 = new System.Diagnostics.EventLog();
-            if (!System.Diagnostics.EventLog.SourceExists("MySource"))
+            string eventSourceName = "MySource";
+            string logName = "MyNewLog";
+
+            if (args.Length > 0)
             {
-                System.Diagnostics.EventLog.CreateEventSource(
-                    "MySource", "MyNewLog");
+                eventSourceName = args[0];
             }
-            eventLog1.Source = "MySource";
-            eventLog1.Log = "MyNewLog";
+
+            if (args.Length > 1)
+            {
+                logName = args[1];
+            }
+
+            eventLog1 = new EventLog();
+
+            if (!EventLog.SourceExists(eventSourceName))
+            {
+                EventLog.CreateEventSource(eventSourceName, logName);
+            }
+
+            eventLog1.Source = eventSourceName;
+            eventLog1.Log = logName;
         }
 
         protected override void OnStart(string[] args)
