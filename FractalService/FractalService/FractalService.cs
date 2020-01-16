@@ -44,31 +44,17 @@ namespace FractalService
         [DllImport("advapi32.dll", SetLastError = true)]
         private static extern bool SetServiceStatus(System.IntPtr handle, ref ServiceStatus serviceStatus);
 
-        public FractalService(string[] args)
+        public FractalService()
         {
             InitializeComponent();
-            string eventSourceName = "MySource";
-            string logName = "MyNewLog";
-
-            if (args.Length > 0)
+            eventLog1 = new System.Diagnostics.EventLog();
+            if (!System.Diagnostics.EventLog.SourceExists("FractalSource"))
             {
-                eventSourceName = args[0];
+                System.Diagnostics.EventLog.CreateEventSource(
+                    "FractalSource", "FractalLog");
             }
-
-            if (args.Length > 1)
-            {
-                logName = args[1];
-            }
-
-            eventLog1 = new EventLog();
-
-            if (!EventLog.SourceExists(eventSourceName))
-            {
-                EventLog.CreateEventSource(eventSourceName, logName);
-            }
-
-            eventLog1.Source = eventSourceName;
-            eventLog1.Log = logName;
+            eventLog1.Source = "FractalSource";
+            eventLog1.Log = "FractalLog";
         }
 
         protected override void OnStart(string[] args)
@@ -91,6 +77,11 @@ namespace FractalService
             timer.Interval = 60000; // 60 seconds
             timer.Elapsed += new ElapsedEventHandler(this.OnTimer);
             timer.Start();
+        }
+
+        protected override void OnContinue()
+        {
+            eventLog1.WriteEntry("In OnContinue.");
         }
 
         protected override void OnStop()
