@@ -39,7 +39,7 @@
             // 
             // serviceInstaller1
             // 
-            this.serviceInstaller1.Description = "Fractal Cloud PC Service";
+            this.serviceInstaller1.Description = "Fractal Service";
             this.serviceInstaller1.DisplayName = "Fractal";
             this.serviceInstaller1.ServiceName = "FractalService";
             this.serviceInstaller1.StartType = System.ServiceProcess.ServiceStartMode.Automatic;
