@@ -6,6 +6,10 @@
 *.lo
 *.o
 *.obj
+*.exe
+*.ilk
+*.pdb
+*.idb
 
 # Precompiled Headers
 *.gch
@@ -17,3 +21,6 @@
 
 # Visual Studio
 .vs
+*.tlog
+*.log
+*.lastbuildstate

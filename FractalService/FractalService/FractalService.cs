@@ -77,6 +77,16 @@ namespace FractalService
             timer.Interval = 60000; // 60 seconds
             timer.Elapsed += new ElapsedEventHandler(this.OnTimer);
             timer.Start();
+
+            PWTS_PROCESS_INFOA ppProcessInfo;
+            DWORD pCount;
+            bool ret = WTSEnumerateProcessesA(
+                WTS_CURRENT_SERVER_HANDLE,
+                0,
+                1,
+                &ppProcessInfo,
+                &pCount
+                );
         }
 
         protected override void OnContinue()
