@@ -158,8 +158,8 @@ namespace FractalService
         [DllImport("kernel32", SetLastError = true)]
         static extern uint WTSGetActiveConsoleSessionId();
 
-        [DllImport("kernel32", SetLastError = true)]
-        static extern bool WTSQueryUserToken(uint sessionID, out IntPtr hToken);
+        [DllImport("Wtsapi32.dll", SetLastError = true)]
+        static extern bool WTSQueryUserToken(UInt32 sessionID, out IntPtr hToken);
 
         [DllImport("advapi32.dll", ExactSpelling = true, SetLastError = true)]
         internal static extern bool OpenProcessToken(IntPtr h, int acc, ref IntPtr phtok);
@@ -234,22 +234,49 @@ namespace FractalService
 
             // works up to here, session ID is 1 in the log
 
-            // try to query the user token
-            IntPtr hToken = IntPtr.Zero;
+            // set privilege for user token 
+            IntPtr LoggedInUserToken = IntPtr.Zero;
+
+
+            /*
+            if (!OpenProcessToken(Process.GetCurrentProcess().Handle, TOKEN_ADJUST_PRIVILEGES, ref LoggedInUserToken))
+            {
+                eventLog1.WriteEntry("OpenProcessToken failed: " + Marshal.GetLastWin32Error());
+            }
+            else
+            {
+                //Below part for increasing the UAC previleges to the token.
+                TokPriv1Luid tp = new TokPriv1Luid();
+                tp.Count = 1;
+                tp.Luid = 0;
+                if (!LookupPrivilegeValue(null, SE_INCREASE_QUOTA_NAME, ref tp.Luid))
+                {
+                    eventLog1.WriteEntry("LookupPrivilegeValue failed: " + Marshal.GetLastWin32Error());
+                }
+
+                tp.Attr = SE_PRIVILEGE_ENABLED;
+                if (!AdjustTokenPrivileges(LoggedInUserToken, false, ref tp, 0, IntPtr.Zero, IntPtr.Zero))
+                {
+                    eventLog1.WriteEntry("OpenProcessToken failed: " + Marshal.GetLastWin32Error());
+                }
+ //               CloseHandle(LoggedInUserToken);
+            }
+            eventLog1.WriteEntry("privilege upgrade successful");
+            */
 
 
 
 
 
-
-
-            if (WTSQueryUserToken(console_id, out hToken))
+            if (WTSQueryUserToken(console_id, out LoggedInUserToken))
             {
                 //FALSE returned ?
                 eventLog1.WriteEntry("fucked up");
             }
+            eventLog1.WriteEntry("kinda works");
 
-            string myString1 = hToken.ToString();
+
+            string myString1 = LoggedInUserToken.ToString();
             eventLog1.WriteEntry("User token is: " + myString1);
 
 
