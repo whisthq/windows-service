@@ -185,3 +185,54 @@ Affected parameters are:
    logtoconsole = 
    logfile = c:\Users\phili\Downloads\fractal-service\FractalService\FractalService\bin\Debug\FractalService.InstallLog
    assemblypath = c:\Users\phili\Downloads\fractal-service\FractalService\FractalService\bin\Debug\FractalService.exe
+Uninstalling assembly 'c:\Users\phili\Downloads\fractal-service\FractalService\FractalService\bin\Debug\FractalService.exe'.
+Affected parameters are:
+   logtoconsole = 
+   logfile = c:\Users\phili\Downloads\fractal-service\FractalService\FractalService\bin\Debug\FractalService.InstallLog
+   assemblypath = c:\Users\phili\Downloads\fractal-service\FractalService\FractalService\bin\Debug\FractalService.exe
+Removing EventLog source FractalService.
+Service FractalService is being removed from the system...
+Service FractalService was successfully removed from the system.
+Attempt to stop service FractalService.
+Installing assembly 'c:\Users\phili\Downloads\fractal-service\FractalService\FractalService\bin\Debug\FractalService.exe'.
+Affected parameters are:
+   logtoconsole = 
+   logfile = c:\Users\phili\Downloads\fractal-service\FractalService\FractalService\bin\Debug\FractalService.InstallLog
+   assemblypath = c:\Users\phili\Downloads\fractal-service\FractalService\FractalService\bin\Debug\FractalService.exe
+Installing service FractalService...
+Service FractalService has been successfully installed.
+Creating EventLog source FractalService in log Application...
+Committing assembly 'c:\Users\phili\Downloads\fractal-service\FractalService\FractalService\bin\Debug\FractalService.exe'.
+Affected parameters are:
+   logtoconsole = 
+   logfile = c:\Users\phili\Downloads\fractal-service\FractalService\FractalService\bin\Debug\FractalService.InstallLog
+   assemblypath = c:\Users\phili\Downloads\fractal-service\FractalService\FractalService\bin\Debug\FractalService.exe
+Uninstalling assembly 'c:\Users\phili\Downloads\fractal-service\FractalService\FractalService\bin\Debug\FractalService.exe'.
+Affected parameters are:
+   logtoconsole = 
+   logfile = c:\Users\phili\Downloads\fractal-service\FractalService\FractalService\bin\Debug\FractalService.InstallLog
+   assemblypath = c:\Users\phili\Downloads\fractal-service\FractalService\FractalService\bin\Debug\FractalService.exe
+Removing EventLog source FractalService.
+Service FractalService is being removed from the system...
+Service FractalService was successfully removed from the system.
+Installing assembly 'c:\Users\phili\Downloads\fractal-service\FractalService\FractalService\bin\Debug\FractalService.exe'.
+Affected parameters are:
+   logtoconsole = 
+   logfile = c:\Users\phili\Downloads\fractal-service\FractalService\FractalService\bin\Debug\FractalService.InstallLog
+   assemblypath = c:\Users\phili\Downloads\fractal-service\FractalService\FractalService\bin\Debug\FractalService.exe
+Installing service FractalService...
+Service FractalService has been successfully installed.
+Creating EventLog source FractalService in log Application...
+Committing assembly 'c:\Users\phili\Downloads\fractal-service\FractalService\FractalService\bin\Debug\FractalService.exe'.
+Affected parameters are:
+   logtoconsole = 
+   logfile = c:\Users\phili\Downloads\fractal-service\FractalService\FractalService\bin\Debug\FractalService.InstallLog
+   assemblypath = c:\Users\phili\Downloads\fractal-service\FractalService\FractalService\bin\Debug\FractalService.exe
+Uninstalling assembly 'c:\Users\phili\Downloads\fractal-service\FractalService\FractalService\bin\Debug\FractalService.exe'.
+Affected parameters are:
+   logtoconsole = 
+   logfile = c:\Users\phili\Downloads\fractal-service\FractalService\FractalService\bin\Debug\FractalService.InstallLog
+   assemblypath = c:\Users\phili\Downloads\fractal-service\FractalService\FractalService\bin\Debug\FractalService.exe
+Removing EventLog source FractalService.
+Service FractalService is being removed from the system...
+Service FractalService was successfully removed from the system.

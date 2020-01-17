@@ -268,16 +268,29 @@ namespace FractalService
 
 
 
-            if (WTSQueryUserToken(console_id, out LoggedInUserToken))
+            if (!WTSQueryUserToken(console_id, out LoggedInUserToken))
             {
                 //FALSE returned ?
-                eventLog1.WriteEntry("fucked up");
+                eventLog1.WriteEntry("returned false, didnt work");
             }
-            eventLog1.WriteEntry("kinda works");
+            eventLog1.WriteEntry("returned true, worked");
 
 
             string myString1 = LoggedInUserToken.ToString();
             eventLog1.WriteEntry("User token is: " + myString1);
+
+
+
+            // works up to here -- now we duplicate the token to create a new primary token 
+            // that we will be able to use to createnewprocess as user in the console session (?)
+            SECURITY_ATTRIBUTES sa = new SECURITY_ATTRIBUTES();
+            IntPtr DuplicatedToken = IntPtr.Zero;
+        
+            if (!DuplicateTokenEx(LoggedInUserToken, MAXIMUM_ALLOWED, ref sa, 2, 1, ref DuplicatedToken)) {
+                eventLog1.WriteEntry("returned false on token duplicate, didnt work");
+            }
+            eventLog1.WriteEntry("returned true on token duplicate, worked");
+
 
 
 
