@@ -237,7 +237,6 @@ namespace FractalService
             // set privilege for user token 
             IntPtr LoggedInUserToken = IntPtr.Zero;
 
-
             /*
             if (!OpenProcessToken(Process.GetCurrentProcess().Handle, TOKEN_ADJUST_PRIVILEGES, ref LoggedInUserToken))
             {
@@ -264,10 +263,6 @@ namespace FractalService
             eventLog1.WriteEntry("privilege upgrade successful");
             */
 
-
-
-
-
             if (!WTSQueryUserToken(console_id, out LoggedInUserToken))
             {
                 //FALSE returned ?
@@ -275,11 +270,8 @@ namespace FractalService
             }
             eventLog1.WriteEntry("returned true, worked");
 
-
             string myString1 = LoggedInUserToken.ToString();
             eventLog1.WriteEntry("User token is: " + myString1);
-
-
 
             // works up to here -- now we duplicate the token to create a new primary token 
             // that we will be able to use to createnewprocess as user in the console session (?)
@@ -290,6 +282,19 @@ namespace FractalService
                 eventLog1.WriteEntry("returned false on token duplicate, didnt work");
             }
             eventLog1.WriteEntry("returned true on token duplicate, worked");
+
+            // works until here
+
+            // impersonate the logged on user to get the same security privileges 
+
+
+            if (ImpersonateLoggedOnUser(DuplicatedToken) == 0)
+            {
+                eventLog1.WriteEntry("returned false on impersonate, didnt work");
+            }
+            eventLog1.WriteEntry("returned true on impersonate, worked");
+
+
 
 
 
