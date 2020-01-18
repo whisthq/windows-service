@@ -61,7 +61,6 @@ namespace FractalService
         internal const string SE_TCB_NAME = "SeTcbPrivilege";
         internal const string SE_RESTORE_NAME = "SeRestorePrivilege";
 
-        private static WindowsImpersonationContext impersonatedUser;
         public static IntPtr hToken = IntPtr.Zero;
         public static IntPtr dupeTokenHandle = IntPtr.Zero;
         const string SE_INCREASE_QUOTA_NAME = "SeIncreaseQuotaPrivilege";
@@ -280,15 +279,8 @@ namespace FractalService
 
 
         [DllImport("shell32.dll")]
-        static extern IntPtr ShellExecute(
-         IntPtr hwnd,
-         string lpOperation,
-         string lpFile,
-         string lpParameters,
-         string lpDirectory,
-         ShowCommands nShowCmd);
+        static extern IntPtr ShellExecute(IntPtr hwnd, string lpOperation, string lpFile, string lpParameters, string lpDirectory, ShowCommands nShowCmd);
 
-        // dlls
         [DllImport("advapi32.dll", SetLastError = true)]
         private static extern bool SetServiceStatus(System.IntPtr handle, ref ServiceStatus serviceStatus);
 
@@ -326,18 +318,12 @@ namespace FractalService
         static extern bool CreateEnvironmentBlock(out IntPtr lpEnvironment, IntPtr hToken, bool bInherit);
 
         [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-        static extern bool CreateProcessAsUser(
-            IntPtr hToken, string lpApplicationName,
-            string lpCommandLine,
-            ref SECURITY_ATTRIBUTES lpProcessAttributes,
-            ref SECURITY_ATTRIBUTES lpThreadAttributes,
-            bool bInheritHandles,
-            uint dwCreationFlags,
-            IntPtr lpEnvironment,
-            string lpCurrentDirectory,
-            ref STARTUPINFO lpStartupInfo,
-            out PROCESS_INFORMATION lpProcessInformation);
+        static extern bool CreateProcessAsUser(IntPtr hToken, string lpApplicationName, string lpCommandLine, ref SECURITY_ATTRIBUTES lpProcessAttributes, ref SECURITY_ATTRIBUTES lpThreadAttributes, bool bInheritHandles, uint dwCreationFlags, IntPtr lpEnvironment, string lpCurrentDirectory, ref STARTUPINFO lpStartupInfo, out PROCESS_INFORMATION lpProcessInformation);
         #endregion
+
+        // Define Tokens handles for impersonating the user -- global to open in OnStart and close in OnStop
+        IntPtr LoggedInUserToken = IntPtr.Zero;
+        IntPtr DuplicatedToken = IntPtr.Zero;
 
         // Fractal Service initialization
         public FractalService()
@@ -373,10 +359,6 @@ namespace FractalService
             uint consoleID;
             consoleID = WTSGetActiveConsoleSessionId();
             eventLog1.WriteEntry("Console session ID is: " + consoleID.ToString()); // for debugging
-
-            // Define Tokens for impersonating the user
-            IntPtr LoggedInUserToken = IntPtr.Zero;
-            IntPtr DuplicatedToken = IntPtr.Zero;
 
             // Obtain the console user token, we will duplicate it to "fake" being in the console
             if (!WTSQueryUserToken(consoleID, out LoggedInUserToken))
@@ -416,17 +398,36 @@ namespace FractalService
             }
             eventLog1.WriteEntry("SetTokenInformation worked, UI access set on console user token.");
 
+            // Create the environment block from the console process that the new process will spawn into
+            IntPtr ConsoleEnvironment = IntPtr.Zero;
+            uint dwCreationFlags = NORMAL_PRIORITY_CLASS | CREATE_NEW_CONSOLE;
+            if (!CreateEnvironmentBlock(out ConsoleEnvironment, DuplicatedToken, true))
+            {
+                eventLog1.WriteEntry("CreateEnvironmentBlock returned false, could not create environment block from DuplicatedToken");
+            }
+            else
+            {
+                // if it suceeded, we don't create a new console
+                dwCreationFlags |= CREATE_UNICODE_ENVIRONMENT;
+                eventLog1.WriteEntry("CreateEnvironmentBlock worked, environment block created from DuplicatedToken");
+            }
 
+            // Prepare the parameters for creating a process in the console that launches the Fractal Protocol server
+            string AppName = "C:\\Windows\\System32\\notepad.exe"; // TODO: replace with protocol executable
+            SECURITY_ATTRIBUTES processAttributes = new SECURITY_ATTRIBUTES();
+            SECURITY_ATTRIBUTES threadAttributes = new SECURITY_ATTRIBUTES();
+            PROCESS_INFORMATION pi; // process
+            STARTUPINFO si = new STARTUPINFO(); // startup info
 
-
-
-            // here
-
-
-
-
-
-
+            // Create a process as a console user for Fractal Protocol server
+            if (!CreateProcessAsUser(DuplicatedToken, AppName, string.Empty, ref processAttributes, ref threadAttributes, true, dwCreationFlags, ConsoleEnvironment, AppName.Substring(0, AppName.LastIndexOf('\\')), ref si, out pi))
+            {
+                eventLog1.WriteEntry("CreateProcessAsUser returned false, could not create Fractal Protocol process as console user.");
+                return;
+            }
+            eventLog1.WriteEntry("CreateProcessAsUser worked, Fractal Protocol server process created as console.");
+      
+            // TODO: monitoring
 
         }
 
@@ -435,6 +436,10 @@ namespace FractalService
         {
             // Write to log for debugging
             eventLog1.WriteEntry("In OnStop - Stopping the service.");
+
+            // Close the token handles
+            CloseHandle(LoggedInUserToken);
+            CloseHandle(DuplicatedToken);
 
             // Update the service state to Stop Pending.
             ServiceStatus serviceStatus = new ServiceStatus();
