@@ -130,6 +130,155 @@ namespace FractalService
             SW_MAX = 11
         }
 
+        enum TOKEN_INFORMATION_CLASS
+        {
+            /// <summary>
+            /// The buffer receives a TOKEN_USER structure that contains the user account of the token.
+            /// </summary>
+            TokenUser = 1,
+
+            /// <summary>
+            /// The buffer receives a TOKEN_GROUPS structure that contains the group accounts associated with the token.
+            /// </summary>
+            TokenGroups,
+
+            /// <summary>
+            /// The buffer receives a TOKEN_PRIVILEGES structure that contains the privileges of the token.
+            /// </summary>
+            TokenPrivileges,
+
+            /// <summary>
+            /// The buffer receives a TOKEN_OWNER structure that contains the default owner security identifier (SID) for newly created objects.
+            /// </summary>
+            TokenOwner,
+
+            /// <summary>
+            /// The buffer receives a TOKEN_PRIMARY_GROUP structure that contains the default primary group SID for newly created objects.
+            /// </summary>
+            TokenPrimaryGroup,
+
+            /// <summary>
+            /// The buffer receives a TOKEN_DEFAULT_DACL structure that contains the default DACL for newly created objects.
+            /// </summary>
+            TokenDefaultDacl,
+
+            /// <summary>
+            /// The buffer receives a TOKEN_SOURCE structure that contains the source of the token. TOKEN_QUERY_SOURCE access is needed to retrieve this information.
+            /// </summary>
+            TokenSource,
+
+            /// <summary>
+            /// The buffer receives a TOKEN_TYPE value that indicates whether the token is a primary or impersonation token.
+            /// </summary>
+            TokenType,
+
+            /// <summary>
+            /// The buffer receives a SECURITY_IMPERSONATION_LEVEL value that indicates the impersonation level of the token. If the access token is not an impersonation token, the function fails.
+            /// </summary>
+            TokenImpersonationLevel,
+
+            /// <summary>
+            /// The buffer receives a TOKEN_STATISTICS structure that contains various token statistics.
+            /// </summary>
+            TokenStatistics,
+
+            /// <summary>
+            /// The buffer receives a TOKEN_GROUPS structure that contains the list of restricting SIDs in a restricted token.
+            /// </summary>
+            TokenRestrictedSids,
+
+            /// <summary>
+            /// The buffer receives a DWORD value that indicates the Terminal Services session identifier that is associated with the token.
+            /// </summary>
+            TokenSessionId,
+
+            /// <summary>
+            /// The buffer receives a TOKEN_GROUPS_AND_PRIVILEGES structure that contains the user SID, the group accounts, the restricted SIDs, and the authentication ID associated with the token.
+            /// </summary>
+            TokenGroupsAndPrivileges,
+
+            /// <summary>
+            /// Reserved.
+            /// </summary>
+            TokenSessionReference,
+
+            /// <summary>
+            /// The buffer receives a DWORD value that is nonzero if the token includes the SANDBOX_INERT flag.
+            /// </summary>
+            TokenSandBoxInert,
+
+            /// <summary>
+            /// Reserved.
+            /// </summary>
+            TokenAuditPolicy,
+
+            /// <summary>
+            /// The buffer receives a TOKEN_ORIGIN value.
+            /// </summary>
+            TokenOrigin,
+
+            /// <summary>
+            /// The buffer receives a TOKEN_ELEVATION_TYPE value that specifies the elevation level of the token.
+            /// </summary>
+            TokenElevationType,
+
+            /// <summary>
+            /// The buffer receives a TOKEN_LINKED_TOKEN structure that contains a handle to another token that is linked to this token.
+            /// </summary>
+            TokenLinkedToken,
+
+            /// <summary>
+            /// The buffer receives a TOKEN_ELEVATION structure that specifies whether the token is elevated.
+            /// </summary>
+            TokenElevation,
+
+            /// <summary>
+            /// The buffer receives a DWORD value that is nonzero if the token has ever been filtered.
+            /// </summary>
+            TokenHasRestrictions,
+
+            /// <summary>
+            /// The buffer receives a TOKEN_ACCESS_INFORMATION structure that specifies security information contained in the token.
+            /// </summary>
+            TokenAccessInformation,
+
+            /// <summary>
+            /// The buffer receives a DWORD value that is nonzero if virtualization is allowed for the token.
+            /// </summary>
+            TokenVirtualizationAllowed,
+
+            /// <summary>
+            /// The buffer receives a DWORD value that is nonzero if virtualization is enabled for the token.
+            /// </summary>
+            TokenVirtualizationEnabled,
+
+            /// <summary>
+            /// The buffer receives a TOKEN_MANDATORY_LABEL structure that specifies the token's integrity level.
+            /// </summary>
+            TokenIntegrityLevel,
+
+            /// <summary>
+            /// The buffer receives a DWORD value that is nonzero if the token has the UIAccess flag set.
+            /// </summary>
+            TokenUIAccess,
+
+            /// <summary>
+            /// The buffer receives a TOKEN_MANDATORY_POLICY structure that specifies the token's mandatory integrity policy.
+            /// </summary>
+            TokenMandatoryPolicy,
+
+            /// <summary>
+            /// The buffer receives the token's logon security identifier (SID).
+            /// </summary>
+            TokenLogonSid,
+
+            /// <summary>
+            /// The maximum value for this enumeration
+            /// </summary>
+            MaxTokenInfoClass
+        }
+
+
         [DllImport("shell32.dll")]
         static extern IntPtr ShellExecute(
          IntPtr hwnd,
@@ -152,6 +301,9 @@ namespace FractalService
         [DllImport("advapi32.dll", ExactSpelling = true, SetLastError = true)]
         internal static extern bool AdjustTokenPrivileges(IntPtr htok, bool disall, ref TokPriv1Luid newst, int len, IntPtr prev, IntPtr relen);
 
+        [DllImport("advapi32.dll", SetLastError = true)]
+        static extern Boolean SetTokenInformation(IntPtr TokenHandle, TOKEN_INFORMATION_CLASS TokenInformationClass, ref UInt32 TokenInformation, UInt32 TokenInformationLength);
+
         [DllImport("kernel32", SetLastError = true), SuppressUnmanagedCodeSecurityAttribute]
         static extern bool CloseHandle(IntPtr handle);
 
@@ -168,18 +320,14 @@ namespace FractalService
         public extern static bool DuplicateToken(IntPtr ExistingTokenHandle, int SECURITY_IMPERSONATION_LEVEL, ref IntPtr DuplicateTokenHandle);
 
         [DllImport("advapi32.dll", EntryPoint = "DuplicateTokenEx")]
-        static extern bool DuplicateTokenEx(IntPtr hExistingToken, Int32 dwDesiredAccess,
-                            ref SECURITY_ATTRIBUTES lpThreadAttributes,
-                            Int32 ImpersonationLevel, Int32 dwTokenType,
-                            ref IntPtr phNewToken);
+        static extern bool DuplicateTokenEx(IntPtr hExistingToken, Int32 dwDesiredAccess, ref SECURITY_ATTRIBUTES lpThreadAttributes, Int32 ImpersonationLevel, Int32 dwTokenType, ref IntPtr phNewToken);
 
         [DllImport("userenv.dll", SetLastError = true)]
         static extern bool CreateEnvironmentBlock(out IntPtr lpEnvironment, IntPtr hToken, bool bInherit);
 
         [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         static extern bool CreateProcessAsUser(
-            IntPtr hToken,
-            string lpApplicationName,
+            IntPtr hToken, string lpApplicationName,
             string lpCommandLine,
             ref SECURITY_ATTRIBUTES lpProcessAttributes,
             ref SECURITY_ATTRIBUTES lpThreadAttributes,
@@ -258,9 +406,15 @@ namespace FractalService
                 // 0 returned, failed to impersonate console user token
                 eventLog1.WriteEntry("ImpersonateLoggedOnUser returned 0, could not impersonate console user token.");                 
             }
-            eventLog1.WriteEntry("ImpersonateLoggedOnUser worked, console user impersonated on DuplicatedToken)");
+            eventLog1.WriteEntry("ImpersonateLoggedOnUser worked, console user impersonated on DuplicatedToken.");
 
-
+            // Set access information for the token to have access to the UI
+            UInt32 uiAccess = 1; // 1 is for UIAccess == True
+            if (!SetTokenInformation(DuplicatedToken, TOKEN_INFORMATION_CLASS.TokenUIAccess, ref uiAccess, sizeof(UInt32))) {
+                // FALSE returned, failed to set UI access on console user token
+                eventLog1.WriteEntry("SetTokenInformation returned false, could not set UI access on console user token.");
+            }
+            eventLog1.WriteEntry("SetTokenInformation worked, UI access set on console user token.");
 
 
 
