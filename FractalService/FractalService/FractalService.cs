@@ -12,7 +12,7 @@ using System.Security;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 
-
+// Enums
 public enum ServiceState
 {
     SERVICE_STOPPED = 0x00000001,
@@ -36,13 +36,13 @@ public struct ServiceStatus
     public int dwWaitHint;
 };
 
+
+// Service namespace
 namespace FractalService
 {
     public partial class FractalService : ServiceBase
     {
-        // member variables
-        private int eventId = 1;
-
+        // DLL imports for Windows API functions
         #region DLL Imports
         internal const int SE_PRIVILEGE_ENABLED = 0x00000002;
         internal const int TOKEN_QUERY = 0x00000008;
@@ -191,21 +191,25 @@ namespace FractalService
             out PROCESS_INFORMATION lpProcessInformation);
         #endregion
 
+        // Fractal Service initialization
         public FractalService()
         {
             InitializeComponent();
             eventLog1 = new System.Diagnostics.EventLog();
             if (!System.Diagnostics.EventLog.SourceExists("FractalSource"))
             {
-                System.Diagnostics.EventLog.CreateEventSource(
-                    "FractalSource", "FractalLog");
+                System.Diagnostics.EventLog.CreateEventSource("FractalSource", "FractalLog");
             }
             eventLog1.Source = "FractalSource";
             eventLog1.Log = "FractalLog";
         }
 
+        // Function that runs when the program starts.
         protected override void OnStart(string[] args)
         {
+            // Write to log for debugging
+            eventLog1.WriteEntry("In OnStart - Starting the service.");
+
             // Update the service state to Start Pending.
             ServiceStatus serviceStatus = new ServiceStatus();
             serviceStatus.dwCurrentState = ServiceState.SERVICE_START_PENDING;
@@ -216,84 +220,53 @@ namespace FractalService
             serviceStatus.dwCurrentState = ServiceState.SERVICE_RUNNING;
             SetServiceStatus(this.ServiceHandle, ref serviceStatus);
 
-            // write log
-            eventLog1.WriteEntry("In OnStart.");
+            //****** Beginning of Console Impersonation to run on headless VM ******\\
+            // Obtain the console ID, should be 1 (may vary?)
+            uint consoleID;
+            consoleID = WTSGetActiveConsoleSessionId();
+            eventLog1.WriteEntry("Console session ID is: " + consoleID.ToString()); // for debugging
 
-            // Set up a timer that triggers every minute.
-            Timer timer = new Timer();
-            timer.Interval = 60000; // 60 seconds
-            timer.Elapsed += new ElapsedEventHandler(this.OnTimer);
-            timer.Start();
-
-            // get the console ID
-            uint console_id;
-            console_id = WTSGetActiveConsoleSessionId();
-
-            string myString = console_id.ToString();
-            eventLog1.WriteEntry("Console session ID is: " + myString);
-
-            // works up to here, session ID is 1 in the log
-
-            // set privilege for user token 
+            // Define Tokens for impersonating the user
             IntPtr LoggedInUserToken = IntPtr.Zero;
-
-            /*
-            if (!OpenProcessToken(Process.GetCurrentProcess().Handle, TOKEN_ADJUST_PRIVILEGES, ref LoggedInUserToken))
-            {
-                eventLog1.WriteEntry("OpenProcessToken failed: " + Marshal.GetLastWin32Error());
-            }
-            else
-            {
-                //Below part for increasing the UAC previleges to the token.
-                TokPriv1Luid tp = new TokPriv1Luid();
-                tp.Count = 1;
-                tp.Luid = 0;
-                if (!LookupPrivilegeValue(null, SE_INCREASE_QUOTA_NAME, ref tp.Luid))
-                {
-                    eventLog1.WriteEntry("LookupPrivilegeValue failed: " + Marshal.GetLastWin32Error());
-                }
-
-                tp.Attr = SE_PRIVILEGE_ENABLED;
-                if (!AdjustTokenPrivileges(LoggedInUserToken, false, ref tp, 0, IntPtr.Zero, IntPtr.Zero))
-                {
-                    eventLog1.WriteEntry("OpenProcessToken failed: " + Marshal.GetLastWin32Error());
-                }
- //               CloseHandle(LoggedInUserToken);
-            }
-            eventLog1.WriteEntry("privilege upgrade successful");
-            */
-
-            if (!WTSQueryUserToken(console_id, out LoggedInUserToken))
-            {
-                //FALSE returned ?
-                eventLog1.WriteEntry("returned false, didnt work");
-            }
-            eventLog1.WriteEntry("returned true, worked");
-
-            string myString1 = LoggedInUserToken.ToString();
-            eventLog1.WriteEntry("User token is: " + myString1);
-
-            // works up to here -- now we duplicate the token to create a new primary token 
-            // that we will be able to use to createnewprocess as user in the console session (?)
-            SECURITY_ATTRIBUTES sa = new SECURITY_ATTRIBUTES();
             IntPtr DuplicatedToken = IntPtr.Zero;
-        
-            if (!DuplicateTokenEx(LoggedInUserToken, MAXIMUM_ALLOWED, ref sa, 2, 1, ref DuplicatedToken)) {
-                eventLog1.WriteEntry("returned false on token duplicate, didnt work");
+
+            // Obtain the console user token, we will duplicate it to "fake" being in the console
+            if (!WTSQueryUserToken(consoleID, out LoggedInUserToken))
+            {
+                // FALSE returned, failed to query the console user token
+                eventLog1.WriteEntry("WTSQueryUserToken returned false, could not query console user token.");
+                return;                    
             }
-            eventLog1.WriteEntry("returned true on token duplicate, worked");
+            eventLog1.WriteEntry("WTSQueryUserToken worked, Console user token is: " + LoggedInUserToken.ToString());
 
-            // works until here
+            // Create new security attribute struct that will be filled when we duplicate the token to a primary token
+            SECURITY_ATTRIBUTES sa = new SECURITY_ATTRIBUTES();
 
-            // impersonate the logged on user to get the same security privileges 
+            // Duplicate the console token to a primary token so we can use it to create a new process
+            // 2 = SECURITY_IMPERSONATION
+            // 1 = TOKEN_PRIMARY
+            if (!DuplicateTokenEx(LoggedInUserToken, MAXIMUM_ALLOWED, ref sa, 2, 1, ref DuplicatedToken)) {
+                // FALSE returned, failed to duplicate the console user token
+                eventLog1.WriteEntry("DuplicateTokenEx returned false, could not duplicate console user token.");
+                return;
+            }
+            eventLog1.WriteEntry("DuplicateTokenEx worked, Duplicated token is: " + DuplicatedToken.ToString());
 
-
+            // Impersonate the console user on our duplicated token to have console privileges
             if (ImpersonateLoggedOnUser(DuplicatedToken) == 0)
             {
-                eventLog1.WriteEntry("returned false on impersonate, didnt work");
+                // 0 returned, failed to impersonate console user token
+                eventLog1.WriteEntry("ImpersonateLoggedOnUser returned 0, could not impersonate console user token.");                 
             }
-            eventLog1.WriteEntry("returned true on impersonate, worked");
+            eventLog1.WriteEntry("ImpersonateLoggedOnUser worked, console user impersonated on DuplicatedToken)");
 
+
+
+
+
+
+
+            // here
 
 
 
@@ -303,13 +276,12 @@ namespace FractalService
 
         }
 
-        protected override void OnContinue()
-        {
-            eventLog1.WriteEntry("In OnContinue.");
-        }
-
+        // Function that runs when the program stops.
         protected override void OnStop()
         {
+            // Write to log for debugging
+            eventLog1.WriteEntry("In OnStop - Stopping the service.");
+
             // Update the service state to Stop Pending.
             ServiceStatus serviceStatus = new ServiceStatus();
             serviceStatus.dwCurrentState = ServiceState.SERVICE_STOP_PENDING;
@@ -320,14 +292,8 @@ namespace FractalService
             serviceStatus.dwCurrentState = ServiceState.SERVICE_STOPPED;
             SetServiceStatus(this.ServiceHandle, ref serviceStatus);
 
-            // write to log
-            eventLog1.WriteEntry("In OnStop.");
-        }
-
-        public void OnTimer(object sender, ElapsedEventArgs args)
-        {
-            // TODO: Insert monitoring activities here.
-            eventLog1.WriteEntry("Monitoring the System", EventLogEntryType.Information, eventId++);
+            // Write to log for debugging
+            eventLog1.WriteEntry("In OnStop - Service stopped.");
         }
     }
 }
