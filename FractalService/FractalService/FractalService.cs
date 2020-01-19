@@ -319,6 +319,9 @@ namespace FractalService
 
         [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         static extern bool CreateProcessAsUser(IntPtr hToken, string lpApplicationName, string lpCommandLine, ref SECURITY_ATTRIBUTES lpProcessAttributes, ref SECURITY_ATTRIBUTES lpThreadAttributes, bool bInheritHandles, uint dwCreationFlags, IntPtr lpEnvironment, string lpCurrentDirectory, ref STARTUPINFO lpStartupInfo, out PROCESS_INFORMATION lpProcessInformation);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool TerminateProcess(IntPtr hProcess, uint uExitCode);
         #endregion
 
         // Define Tokens handles for impersonating the user -- global to open in OnStart and close in OnStop
@@ -427,7 +430,7 @@ namespace FractalService
             }
             eventLog1.WriteEntry("CreateProcessAsUser worked, Fractal Protocol server process created as console.");
       
-            // TODO: monitoring
+            // TODO: monitoring, in a new thread
 
         }
 
@@ -436,6 +439,9 @@ namespace FractalService
         {
             // Write to log for debugging
             eventLog1.WriteEntry("In OnStop - Stopping the service.");
+
+            // Terminate the process if it is still active
+            TerminateProcess(DuplicatedToken, 1); // 1 is arbitrary exit code
 
             // Close the token handles
             CloseHandle(LoggedInUserToken);
