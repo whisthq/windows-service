@@ -11,6 +11,7 @@ using System.Timers;
 using System.Security;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
+using System.Threading;
 
 // Enums
 public enum ServiceState
@@ -277,7 +278,6 @@ namespace FractalService
             MaxTokenInfoClass
         }
 
-
         [DllImport("shell32.dll")]
         static extern IntPtr ShellExecute(IntPtr hwnd, string lpOperation, string lpFile, string lpParameters, string lpDirectory, ShowCommands nShowCmd);
 
@@ -296,10 +296,10 @@ namespace FractalService
         [DllImport("advapi32.dll", SetLastError = true)]
         static extern Boolean SetTokenInformation(IntPtr TokenHandle, TOKEN_INFORMATION_CLASS TokenInformationClass, ref UInt32 TokenInformation, UInt32 TokenInformationLength);
 
-        [DllImport("kernel32", SetLastError = true), SuppressUnmanagedCodeSecurityAttribute]
+        [DllImport("kernel32.dll", SetLastError = true), SuppressUnmanagedCodeSecurityAttribute]
         static extern bool CloseHandle(IntPtr handle);
 
-        [DllImport("kernel32", SetLastError = true)]
+        [DllImport("kernel32.dll", SetLastError = true)]
         static extern uint WTSGetActiveConsoleSessionId();
 
         [DllImport("Wtsapi32.dll", SetLastError = true)]
@@ -357,7 +357,50 @@ namespace FractalService
             serviceStatus.dwCurrentState = ServiceState.SERVICE_RUNNING;
             SetServiceStatus(this.ServiceHandle, ref serviceStatus);
 
-            //****** Beginning of Console Impersonation to run on headless VM ******\\
+            // Launch the Fractal Protocol server as a console process to run on headless VM
+            LaunchConsoleProcess();
+
+            // Create new thread to monitor the Fractal Protocol server process, and restart it if it crashed
+            Thread processMonitor = new Thread(MonitorProcess);
+            processMonitor.Start();
+
+            // For debugging
+            eventLog1.WriteEntry("Process monitoring thread launched - End of OnStart().");
+        }
+
+        // Function that runs when the program stops.
+        protected override void OnStop()
+        {
+            // Write to log for debugging
+            eventLog1.WriteEntry("In OnStop - Stopping the service.");
+
+            // Terminate the process if it is still active
+            TerminateProcess(DuplicatedToken, 1); // 1 is arbitrary exit code
+
+            // Close the token handles
+            CloseHandle(LoggedInUserToken);
+            CloseHandle(DuplicatedToken);
+
+            // Update the service state to Stop Pending.
+            ServiceStatus serviceStatus = new ServiceStatus();
+            serviceStatus.dwCurrentState = ServiceState.SERVICE_STOP_PENDING;
+            serviceStatus.dwWaitHint = 100000;
+            SetServiceStatus(this.ServiceHandle, ref serviceStatus);
+
+            // Update the service state to Stopped.
+            serviceStatus.dwCurrentState = ServiceState.SERVICE_STOPPED;
+            SetServiceStatus(this.ServiceHandle, ref serviceStatus);
+
+            // Write to log for debugging
+            eventLog1.WriteEntry("In OnStop - Service stopped.");
+        }
+
+        // Launch the Fractal Protocol server as a console process to run on headless VM
+        public void LaunchConsoleProcess()
+        {
+            // For debugging
+            eventLog1.WriteEntry("In LaunchConsoleProcess.");
+
             // Obtain the console ID, should be 1 (may vary?)
             uint consoleID;
             consoleID = WTSGetActiveConsoleSessionId();
@@ -368,7 +411,7 @@ namespace FractalService
             {
                 // FALSE returned, failed to query the console user token
                 eventLog1.WriteEntry("WTSQueryUserToken returned false, could not query console user token.");
-                return;                    
+                return;
             }
             eventLog1.WriteEntry("WTSQueryUserToken worked, Console user token is: " + LoggedInUserToken.ToString());
 
@@ -378,7 +421,8 @@ namespace FractalService
             // Duplicate the console token to a primary token so we can use it to create a new process
             // 2 = SECURITY_IMPERSONATION
             // 1 = TOKEN_PRIMARY
-            if (!DuplicateTokenEx(LoggedInUserToken, MAXIMUM_ALLOWED, ref sa, 2, 1, ref DuplicatedToken)) {
+            if (!DuplicateTokenEx(LoggedInUserToken, MAXIMUM_ALLOWED, ref sa, 2, 1, ref DuplicatedToken))
+            {
                 // FALSE returned, failed to duplicate the console user token
                 eventLog1.WriteEntry("DuplicateTokenEx returned false, could not duplicate console user token.");
                 return;
@@ -389,13 +433,14 @@ namespace FractalService
             if (ImpersonateLoggedOnUser(DuplicatedToken) == 0)
             {
                 // 0 returned, failed to impersonate console user token
-                eventLog1.WriteEntry("ImpersonateLoggedOnUser returned 0, could not impersonate console user token.");                 
+                eventLog1.WriteEntry("ImpersonateLoggedOnUser returned 0, could not impersonate console user token.");
             }
             eventLog1.WriteEntry("ImpersonateLoggedOnUser worked, console user impersonated on DuplicatedToken.");
 
             // Set access information for the token to have access to the UI
             UInt32 uiAccess = 1; // 1 is for UIAccess == True
-            if (!SetTokenInformation(DuplicatedToken, TOKEN_INFORMATION_CLASS.TokenUIAccess, ref uiAccess, sizeof(UInt32))) {
+            if (!SetTokenInformation(DuplicatedToken, TOKEN_INFORMATION_CLASS.TokenUIAccess, ref uiAccess, sizeof(UInt32)))
+            {
                 // FALSE returned, failed to set UI access on console user token
                 eventLog1.WriteEntry("SetTokenInformation returned false, could not set UI access on console user token.");
             }
@@ -428,37 +473,40 @@ namespace FractalService
                 eventLog1.WriteEntry("CreateProcessAsUser returned false, could not create Fractal Protocol process as console user.");
                 return;
             }
-            eventLog1.WriteEntry("CreateProcessAsUser worked, Fractal Protocol server process created as console.");
-      
-            // TODO: monitoring, in a new thread
-
+            eventLog1.WriteEntry("CreateProcessAsUser worked, Fractal Protocol server process created as console - End of LaunchConsoleProcess.");
         }
 
-        // Function that runs when the program stops.
-        protected override void OnStop()
+        // Thread function to monitor a process and restart it if it crashed
+        public void MonitorProcess()
         {
-            // Write to log for debugging
-            eventLog1.WriteEntry("In OnStop - Stopping the service.");
+            // For debugging
+            eventLog1.WriteEntry("In MonitorProcess. Process monitoring started.");
 
-            // Terminate the process if it is still active
-            TerminateProcess(DuplicatedToken, 1); // 1 is arbitrary exit code
+            // Set up a timer that triggers every minute for checking on the service
+            System.Timers.Timer timer = new System.Timers.Timer();
+            timer.Interval = 60000; // 60 seconds
+            timer.Elapsed += new ElapsedEventHandler(this.OnTimer);
+            timer.Start();
+        }
 
-            // Close the token handles
-            CloseHandle(LoggedInUserToken);
-            CloseHandle(DuplicatedToken);
+        // Function that gets called every minute to check on the timer
+        public void OnTimer(object sender, ElapsedEventArgs args)
+        {
+            // For debugging
+            eventLog1.WriteEntry("In OnTimer. Monitoring the Process, 1 minute elapsed.");
 
-            // Update the service state to Stop Pending.
-            ServiceStatus serviceStatus = new ServiceStatus();
-            serviceStatus.dwCurrentState = ServiceState.SERVICE_STOP_PENDING;
-            serviceStatus.dwWaitHint = 100000;
-            SetServiceStatus(this.ServiceHandle, ref serviceStatus);
 
-            // Update the service state to Stopped.
-            serviceStatus.dwCurrentState = ServiceState.SERVICE_STOPPED;
-            SetServiceStatus(this.ServiceHandle, ref serviceStatus);
 
-            // Write to log for debugging
-            eventLog1.WriteEntry("In OnStop - Service stopped.");
+
+
+            
+            // TODO: Insert monitoring activities here.
+
+
+
+
+
+
         }
     }
 }
