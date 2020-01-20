@@ -508,7 +508,7 @@ namespace FractalService
                 CloseHandle(DuplicatedToken);
                 return;
             }
-            eventLog1.WriteEntry("CreateProcessAsUser worked, Fractal Protocol server process created as console - End of LaunchConsoleProcess.");
+            // eventLog1.WriteEntry("CreateProcessAsUser worked, Fractal Protocol server process created as console - End of LaunchConsoleProcess.");
 
             // Store the process handle in a global var
             ProcessHandle = pi.hProcess;
