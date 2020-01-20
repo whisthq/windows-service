@@ -492,7 +492,7 @@ namespace FractalService
             }
 
             // Prepare the parameters for creating a process in the console that launches the Fractal Protocol server
-            string AppName = "C:\\Windows\\System32\\notepad.exe"; // TODO: replace with protocol executable
+            string AppName = "C:\\Program Files (x86)\\Fractal\\fractal-protocol\\server\\server.exe"; // TODO: clean path
             SECURITY_ATTRIBUTES processAttributes = new SECURITY_ATTRIBUTES();
             SECURITY_ATTRIBUTES threadAttributes = new SECURITY_ATTRIBUTES();
             PROCESS_INFORMATION pi; // process
