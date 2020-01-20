@@ -58,6 +58,12 @@ namespace FractalService
         internal const int NORMAL_PRIORITY_CLASS = 0x20;
         internal const int CREATE_NEW_CONSOLE = 0x00000010;
 
+        internal const UInt32 INFINITE = 0xFFFFFFFF;
+        internal const UInt32 WAIT_ABANDONED = 0x00000080;
+        internal const UInt32 WAIT_OBJECT_0 = 0x00000000;
+        internal const UInt32 WAIT_TIMEOUT = 0x00000102;
+        internal const UInt32 STILL_ACTIVE = 259; // for GetExitCode
+
         internal const string SE_SHUTDOWN_NAME = "SeShutdownPrivilege";
         internal const string SE_TCB_NAME = "SeTcbPrivilege";
         internal const string SE_RESTORE_NAME = "SeRestorePrivilege";
@@ -317,16 +323,34 @@ namespace FractalService
         [DllImport("userenv.dll", SetLastError = true)]
         static extern bool CreateEnvironmentBlock(out IntPtr lpEnvironment, IntPtr hToken, bool bInherit);
 
+        [DllImport("userenv.dll", SetLastError = true)]
+        static extern bool DestroyEnvironmentBlock(IntPtr lpEnvironment);
+
         [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         static extern bool CreateProcessAsUser(IntPtr hToken, string lpApplicationName, string lpCommandLine, ref SECURITY_ATTRIBUTES lpProcessAttributes, ref SECURITY_ATTRIBUTES lpThreadAttributes, bool bInheritHandles, uint dwCreationFlags, IntPtr lpEnvironment, string lpCurrentDirectory, ref STARTUPINFO lpStartupInfo, out PROCESS_INFORMATION lpProcessInformation);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool TerminateProcess(IntPtr hProcess, uint uExitCode);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool GetExitCodeProcess(IntPtr hProcess, out uint lpExitCode);
+
+        [DllImport("kernel32.dll")]
+        static extern uint GetLastError();
+
+        [DllImport("advapi32.dll", SetLastError = true)]
+        static extern bool RevertToSelf();
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern UInt32 WaitForSingleObject(IntPtr hHandle, UInt32 dwMilliseconds);
         #endregion
 
         // Define Tokens handles for impersonating the user -- global to open in OnStart and close in OnStop
         IntPtr LoggedInUserToken = IntPtr.Zero;
         IntPtr DuplicatedToken = IntPtr.Zero;
+        IntPtr ProcessHandle = IntPtr.Zero; // handle for the Protocol process
+        IntPtr ConsoleEnvironment = IntPtr.Zero; // console environment block
+        bool service_is_running = true; // boolean for whether the service is running, to monitor the process
 
         // Fractal Service initialization
         public FractalService()
@@ -374,10 +398,20 @@ namespace FractalService
             // Write to log for debugging
             eventLog1.WriteEntry("In OnStop - Stopping the service.");
 
+            // Set service is running to false to stop monitoring
+            service_is_running = false;
+
             // Terminate the process if it is still active
-            TerminateProcess(DuplicatedToken, 1); // 1 is arbitrary exit code
+            TerminateProcess(ProcessHandle, 2); // 2 is arbitrary exit code
+
+            // Revert the impersonation
+            RevertToSelf();
+
+            // Destroy the environment block
+            DestroyEnvironmentBlock(ConsoleEnvironment);
 
             // Close the token handles
+            CloseHandle(ProcessHandle);
             CloseHandle(LoggedInUserToken);
             CloseHandle(DuplicatedToken);
 
@@ -404,16 +438,18 @@ namespace FractalService
             // Obtain the console ID, should be 1 (may vary?)
             uint consoleID;
             consoleID = WTSGetActiveConsoleSessionId();
-            eventLog1.WriteEntry("Console session ID is: " + consoleID.ToString()); // for debugging
+            // eventLog1.WriteEntry("Console session ID is: " + consoleID.ToString()); // for debugging
 
             // Obtain the console user token, we will duplicate it to "fake" being in the console
             if (!WTSQueryUserToken(consoleID, out LoggedInUserToken))
             {
                 // FALSE returned, failed to query the console user token
-                eventLog1.WriteEntry("WTSQueryUserToken returned false, could not query console user token.");
+                eventLog1.WriteEntry("WTSQueryUserToken returned false, could not query console user token w/ error code: " + GetLastError().ToString());
+                CloseHandle(DuplicatedToken);
+                CloseHandle(LoggedInUserToken);
                 return;
             }
-            eventLog1.WriteEntry("WTSQueryUserToken worked, Console user token is: " + LoggedInUserToken.ToString());
+           // eventLog1.WriteEntry("WTSQueryUserToken worked, Console user token is: " + LoggedInUserToken.ToString());
 
             // Create new security attribute struct that will be filled when we duplicate the token to a primary token
             SECURITY_ATTRIBUTES sa = new SECURITY_ATTRIBUTES();
@@ -424,40 +460,35 @@ namespace FractalService
             if (!DuplicateTokenEx(LoggedInUserToken, MAXIMUM_ALLOWED, ref sa, 2, 1, ref DuplicatedToken))
             {
                 // FALSE returned, failed to duplicate the console user token
-                eventLog1.WriteEntry("DuplicateTokenEx returned false, could not duplicate console user token.");
+                eventLog1.WriteEntry("DuplicateTokenEx returned false, could not duplicate console user token w/ error code: " + GetLastError().ToString());
+                CloseHandle(DuplicatedToken);
+                CloseHandle(LoggedInUserToken);
                 return;
             }
-            eventLog1.WriteEntry("DuplicateTokenEx worked, Duplicated token is: " + DuplicatedToken.ToString());
+            // eventLog1.WriteEntry("DuplicateTokenEx worked, Duplicated token is: " + DuplicatedToken.ToString());
 
             // Impersonate the console user on our duplicated token to have console privileges
             if (ImpersonateLoggedOnUser(DuplicatedToken) == 0)
             {
                 // 0 returned, failed to impersonate console user token
-                eventLog1.WriteEntry("ImpersonateLoggedOnUser returned 0, could not impersonate console user token.");
+                eventLog1.WriteEntry("ImpersonateLoggedOnUser returned 0, could not impersonate console user token w/ error code: " + GetLastError().ToString());
+                CloseHandle(LoggedInUserToken);
+                CloseHandle(DuplicatedToken);
+                return;
             }
-            eventLog1.WriteEntry("ImpersonateLoggedOnUser worked, console user impersonated on DuplicatedToken.");
-
-            // Set access information for the token to have access to the UI
-            UInt32 uiAccess = 1; // 1 is for UIAccess == True
-            if (!SetTokenInformation(DuplicatedToken, TOKEN_INFORMATION_CLASS.TokenUIAccess, ref uiAccess, sizeof(UInt32)))
-            {
-                // FALSE returned, failed to set UI access on console user token
-                eventLog1.WriteEntry("SetTokenInformation returned false, could not set UI access on console user token.");
-            }
-            eventLog1.WriteEntry("SetTokenInformation worked, UI access set on console user token.");
+            // eventLog1.WriteEntry("ImpersonateLoggedOnUser worked, console user impersonated on DuplicatedToken.");
 
             // Create the environment block from the console process that the new process will spawn into
-            IntPtr ConsoleEnvironment = IntPtr.Zero;
             uint dwCreationFlags = NORMAL_PRIORITY_CLASS | CREATE_NEW_CONSOLE;
             if (!CreateEnvironmentBlock(out ConsoleEnvironment, DuplicatedToken, true))
             {
-                eventLog1.WriteEntry("CreateEnvironmentBlock returned false, could not create environment block from DuplicatedToken");
+                eventLog1.WriteEntry("CreateEnvironmentBlock returned false, could not create environment block from DuplicatedToken w/ error code: " + GetLastError().ToString());
             }
             else
             {
                 // if it suceeded, we don't create a new console
                 dwCreationFlags |= CREATE_UNICODE_ENVIRONMENT;
-                eventLog1.WriteEntry("CreateEnvironmentBlock worked, environment block created from DuplicatedToken");
+                // eventLog1.WriteEntry("CreateEnvironmentBlock worked, environment block created from DuplicatedToken");
             }
 
             // Prepare the parameters for creating a process in the console that launches the Fractal Protocol server
@@ -471,9 +502,18 @@ namespace FractalService
             if (!CreateProcessAsUser(DuplicatedToken, AppName, string.Empty, ref processAttributes, ref threadAttributes, true, dwCreationFlags, ConsoleEnvironment, AppName.Substring(0, AppName.LastIndexOf('\\')), ref si, out pi))
             {
                 eventLog1.WriteEntry("CreateProcessAsUser returned false, could not create Fractal Protocol process as console user.");
+                RevertToSelf(); // revert impersonation
+                DestroyEnvironmentBlock(ConsoleEnvironment);
+                CloseHandle(LoggedInUserToken);
+                CloseHandle(DuplicatedToken);
                 return;
             }
             eventLog1.WriteEntry("CreateProcessAsUser worked, Fractal Protocol server process created as console - End of LaunchConsoleProcess.");
+
+            // Store the process handle in a global var
+            ProcessHandle = pi.hProcess;
+
+            // Done with initiating the service, now we monitor the process to restart it if it crashes
         }
 
         // Thread function to monitor a process and restart it if it crashed
@@ -482,31 +522,31 @@ namespace FractalService
             // For debugging
             eventLog1.WriteEntry("In MonitorProcess. Process monitoring started.");
 
-            // Set up a timer that triggers every minute for checking on the service
-            System.Timers.Timer timer = new System.Timers.Timer();
-            timer.Interval = 60000; // 60 seconds
-            timer.Elapsed += new ElapsedEventHandler(this.OnTimer);
-            timer.Start();
+            // Monitor the process until the service gets manually stopped in /Services in Windows
+            while (service_is_running)
+            {
+                // Wait for the process to terminate, if it does we reset all the variables and restart it
+                if (WaitForSingleObject(ProcessHandle, INFINITE) == WAIT_OBJECT_0)
+                {
+                    // For debugging
+                    eventLog1.WriteEntry("Application crashed, resetting process and restarting.");
+
+                    // Revert impersonation
+                    RevertToSelf();
+
+                    // Destroy the environment
+                    DestroyEnvironmentBlock(ConsoleEnvironment);
+
+                    // Reset the handles
+                    ProcessHandle = IntPtr.Zero;
+                    DuplicatedToken = IntPtr.Zero;
+                    LoggedInUserToken = IntPtr.Zero;
+
+                    // Restart the process!
+                    LaunchConsoleProcess();
+                }
+            }
+            // Exited the forever loop, service is getting stopped manually
         }
-
-        // Function that gets called every minute to check on the timer
-        public void OnTimer(object sender, ElapsedEventArgs args)
-        {
-            // For debugging
-            eventLog1.WriteEntry("In OnTimer. Monitoring the Process, 1 minute elapsed.");
-
-
-
-
-
-            
-            // TODO: Insert monitoring activities here.
-
-
-
-
-
-
-        }
-    }
+    } 
 }
