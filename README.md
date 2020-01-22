@@ -9,3 +9,5 @@ The service then needs to be installed. Navigate to the .exe directory, which sh
 If it fails, you need to set permission in the Windows registry. Open the registry by typing `regedit.exe` in the search bar, navigate to `HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Eventlog`, right-click `EventLog` and select `Permissions`. Then check `Full Access` for the authenticated users, spin up a new terminal and run the install again. It should now install correctly.
 
 You can then go to the Services application on Windows, locate the process and start it by pressing Start. It should run as SYSTEM under the Details tab. You can stop it there as well. Before making any modifications to the code, the service needs to be uninstalled with `installutil /u FractalService.exe`.
+
+The /bin/Debug folder contains the pre-compiled executable for a VM. You can simply download it, install it with `installutil FractalService.exe` and it should be good to start automatically at boot.

@@ -37,7 +37,6 @@ public struct ServiceStatus
     public int dwWaitHint;
 };
 
-
 // Service namespace
 namespace FractalService
 {
@@ -67,9 +66,6 @@ namespace FractalService
         internal const string SE_SHUTDOWN_NAME = "SeShutdownPrivilege";
         internal const string SE_TCB_NAME = "SeTcbPrivilege";
         internal const string SE_RESTORE_NAME = "SeRestorePrivilege";
-
-        public static IntPtr hToken = IntPtr.Zero;
-        public static IntPtr dupeTokenHandle = IntPtr.Zero;
         const string SE_INCREASE_QUOTA_NAME = "SeIncreaseQuotaPrivilege";
 
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -284,6 +280,75 @@ namespace FractalService
             MaxTokenInfoClass
         }
 
+        public enum LogonType
+        {
+            /// <summary>
+            /// This logon type is intended for users who will be interactively using the computer, such as a user being logged on  
+            /// by a terminal server, remote shell, or similar process.
+            /// This logon type has the additional expense of caching logon information for disconnected operations;
+            /// therefore, it is inappropriate for some client/server applications,
+            /// such as a mail server.
+            /// </summary>
+            LOGON32_LOGON_INTERACTIVE = 2,
+
+            /// <summary>
+            /// This logon type is intended for high performance servers to authenticate plaintext passwords.
+
+            /// The LogonUser function does not cache credentials for this logon type.
+            /// </summary>
+            LOGON32_LOGON_NETWORK = 3,
+
+            /// <summary>
+            /// This logon type is intended for batch servers, where processes may be executing on behalf of a user without
+            /// their direct intervention. This type is also for higher performance servers that process many plaintext
+            /// authentication attempts at a time, such as mail or Web servers.
+            /// The LogonUser function does not cache credentials for this logon type.
+            /// </summary>
+            LOGON32_LOGON_BATCH = 4,
+
+            /// <summary>
+            /// Indicates a service-type logon. The account provided must have the service privilege enabled.
+            /// </summary>
+            LOGON32_LOGON_SERVICE = 5,
+
+            /// <summary>
+            /// This logon type is for GINA DLLs that log on users who will be interactively using the computer.
+            /// This logon type can generate a unique audit record that shows when the workstation was unlocked.
+            /// </summary>
+            LOGON32_LOGON_UNLOCK = 7,
+
+            /// <summary>
+            /// This logon type preserves the name and password in the authentication package, which allows the server to make
+            /// connections to other network servers while impersonating the client. A server can accept plaintext credentials
+            /// from a client, call LogonUser, verify that the user can access the system across the network, and still
+            /// communicate with other servers.
+            /// NOTE: Windows NT:  This value is not supported.
+            /// </summary>
+            LOGON32_LOGON_NETWORK_CLEARTEXT = 8,
+
+            /// <summary>
+            /// This logon type allows the caller to clone its current token and specify new credentials for outbound connections.
+            /// The new logon session has the same local identifier but uses different credentials for other network connections.
+            /// NOTE: This logon type is supported only by the LOGON32_PROVIDER_WINNT50 logon provider.
+            /// NOTE: Windows NT:  This value is not supported.
+            /// </summary>
+            LOGON32_LOGON_NEW_CREDENTIALS = 9,
+        }
+
+        public enum LogonProvider
+        {
+            /// <summary>
+            /// Use the standard logon provider for the system.
+            /// The default security provider is negotiate, unless you pass NULL for the domain name and the user name
+            /// is not in UPN format. In this case, the default provider is NTLM.
+            /// NOTE: Windows 2000/NT:   The default security provider is NTLM.
+            /// </summary>
+            LOGON32_PROVIDER_DEFAULT = 0,
+            LOGON32_PROVIDER_WINNT35 = 1,
+            LOGON32_PROVIDER_WINNT40 = 2,
+            LOGON32_PROVIDER_WINNT50 = 3
+        }
+
         [DllImport("shell32.dll")]
         static extern IntPtr ShellExecute(IntPtr hwnd, string lpOperation, string lpFile, string lpParameters, string lpDirectory, ShowCommands nShowCmd);
 
@@ -341,16 +406,37 @@ namespace FractalService
         [DllImport("advapi32.dll", SetLastError = true)]
         static extern bool RevertToSelf();
 
+        [DllImport("advapi32.dll", SetLastError = true)]
+        public static extern bool LogonUser(string pszUsername, string pszDomain, string pszPassword, LogonType dwLogonType, LogonProvider dwLogonProvider, ref IntPtr phToken);
+
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern UInt32 WaitForSingleObject(IntPtr hHandle, UInt32 dwMilliseconds);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern IntPtr GetCurrentProcess();
+
+        [DllImport("advapi32.dll", SetLastError = true)]
+        static extern bool OpenProcessToken(IntPtr ProcessHandle, UInt32 DesiredAccess, out IntPtr TokenHandle);
         #endregion
+
+
+
+
+
+
+
 
         // Define Tokens handles for impersonating the user -- global to open in OnStart and close in OnStop
         IntPtr LoggedInUserToken = IntPtr.Zero;
+        IntPtr LoggedInToken1 = IntPtr.Zero;
         IntPtr DuplicatedToken = IntPtr.Zero;
         IntPtr ProcessHandle = IntPtr.Zero; // handle for the Protocol process
         IntPtr ConsoleEnvironment = IntPtr.Zero; // console environment block
         bool service_is_running = true; // boolean for whether the service is running, to monitor the process
+
+
+
+
 
         // Fractal Service initialization
         public FractalService()
@@ -365,7 +451,7 @@ namespace FractalService
             eventLog1.Log = "FractalLog";
         }
 
-        // Function that runs when the program starts.
+        // Function that runs when the program starts
         protected override void OnStart(string[] args)
         {
             // Write to log for debugging
@@ -382,7 +468,12 @@ namespace FractalService
             SetServiceStatus(this.ServiceHandle, ref serviceStatus);
 
             // Launch the Fractal Protocol server as a console process to run on headless VM
-            LaunchConsoleProcess();
+            if (!LaunchConsoleProcess())
+            {
+                eventLog1.WriteEntry("Failed to launch Fractal Protocol as console process.");
+                return;
+            }
+            eventLog1.WriteEntry("Successfully launched Fractal Protocol as console process.");
 
             // Create new thread to monitor the Fractal Protocol server process, and restart it if it crashed
             Thread processMonitor = new Thread(MonitorProcess);
@@ -392,7 +483,7 @@ namespace FractalService
             eventLog1.WriteEntry("Process monitoring thread launched - End of OnStart().");
         }
 
-        // Function that runs when the program stops.
+        // Function that runs when the program stops
         protected override void OnStop()
         {
             // Write to log for debugging
@@ -400,6 +491,9 @@ namespace FractalService
 
             // Set service is running to false to stop monitoring
             service_is_running = false;
+
+
+
 
             // Terminate the process if it is still active
             TerminateProcess(ProcessHandle, 2); // 2 is arbitrary exit code
@@ -414,6 +508,9 @@ namespace FractalService
             CloseHandle(ProcessHandle);
             CloseHandle(LoggedInUserToken);
             CloseHandle(DuplicatedToken);
+
+
+
 
             // Update the service state to Stop Pending.
             ServiceStatus serviceStatus = new ServiceStatus();
@@ -430,16 +527,151 @@ namespace FractalService
         }
 
         // Launch the Fractal Protocol server as a console process to run on headless VM
-        public void LaunchConsoleProcess()
+        public bool LaunchConsoleProcess()
         {
             // For debugging
             eventLog1.WriteEntry("In LaunchConsoleProcess.");
 
-            // Obtain the console ID, should be 1 (may vary?)
+            // Obtain the console ID, should be 1 (may vary, but generally shouldn't)
             uint consoleID;
             consoleID = WTSGetActiveConsoleSessionId();
-            // eventLog1.WriteEntry("Console session ID is: " + consoleID.ToString()); // for debugging
+            eventLog1.WriteEntry("Console session ID is: " + consoleID.ToString()); // for debugging
 
+
+
+
+            // UIAccess token
+            //uint UIAccess = 1;
+
+            // CreateProcess parameters
+            PROCESS_INFORMATION pi; // process
+            STARTUPINFO si = new STARTUPINFO(); // startup info
+            // TightVNC sets some useless parameters here, maybe TODO ?
+
+            // Get the current process (should be the console/service?)
+            IntPtr procHandle = GetCurrentProcess();
+
+            // Define the tokens we then use
+            IntPtr token = IntPtr.Zero;
+            IntPtr userToken = IntPtr.Zero;
+
+            // Open the handle of the current process
+            if (!OpenProcessToken(procHandle, TOKEN_DUPLICATE, out token))
+            {
+                eventLog1.WriteEntry("OpenProcessToken failed w/ error code: " + GetLastError().ToString());
+                return false;
+            }
+            eventLog1.WriteEntry("OpenProcessToken succeeded.");
+
+            // Create new security attribute struct that will be filled when we duplicate the token to a primary token
+            SECURITY_ATTRIBUTES sa = new SECURITY_ATTRIBUTES();
+
+            // Duplicate the console token to a primary token so we can use it to create a new process
+            // 2 = SECURITY_IMPERSONATION
+            // 1 = TOKEN_PRIMARY
+            if (!DuplicateTokenEx(token, MAXIMUM_ALLOWED, ref sa, 2, 1, ref userToken))
+            {
+                eventLog1.WriteEntry("DuplicateTokenEx failed w/ error code: " + GetLastError().ToString());
+                return false;
+            }
+            eventLog1.WriteEntry("DuplicateTokenEx succeeded, duplicated token is: " + userToken.ToString());
+
+            // Set token to be using the console ID
+            if (!SetTokenInformation(userToken, TOKEN_INFORMATION_CLASS.TokenSessionId, ref consoleID, sizeof(uint)))
+            {
+                eventLog1.WriteEntry("SetTokenInformation failed w/ error code: " + GetLastError().ToString());
+                return false;
+            }
+            eventLog1.WriteEntry("SetTokenInformation succeeded.");
+
+
+
+
+
+
+
+
+
+
+            /*
+            // TODO: log the user in here!
+            string username = "yellowsun664064";
+            string domain = "";
+            string password = "j2xlT45n0bqujYdjvjbvR";
+
+            if (!LogonUser(username, domain, password, LogonType.LOGON32_LOGON_INTERACTIVE, LogonProvider.LOGON32_PROVIDER_DEFAULT, ref LoggedInToken1))
+            {
+                // FALSE returned, failed to query the console user token
+                eventLog1.WriteEntry("LogonUser failed, could not log the user in w/ error code: " + GetLastError().ToString());
+                CloseHandle(DuplicatedToken);
+                CloseHandle(LoggedInUserToken);
+                return;
+            }
+            eventLog1.WriteEntry("LogonUser suceeded, user successfully logged in.");
+            */
+
+
+
+            string AppName = "C:\\Program Files (x86)\\Fractal\\fractal-protocol\\server\\server.exe"; // TODO: clean path
+            SECURITY_ATTRIBUTES processAttributes = new SECURITY_ATTRIBUTES();
+            SECURITY_ATTRIBUTES threadAttributes = new SECURITY_ATTRIBUTES();
+
+
+
+
+            // Create the environment block from the console process that the new process will spawn into
+            uint dwCreationFlags = NORMAL_PRIORITY_CLASS; // | CREATE_NEW_CONSOLE;
+            //if (!CreateEnvironmentBlock(out ConsoleEnvironment, LoggedInUserToken, true))
+            //{
+            //    eventLog1.WriteEntry("CreateEnvironmentBlock returned false, could not create environment block from DuplicatedToken w/ error code: " + GetLastError().ToString());
+            //}
+            //else
+            //{
+                // if it suceeded, we don't create a new console
+            //    dwCreationFlags |= CREATE_UNICODE_ENVIRONMENT;
+                // eventLog1.WriteEntry("CreateEnvironmentBlock worked, environment block created from DuplicatedToken");
+            //}
+
+
+            // Create a process as a console user for Fractal Protocol server
+            if (!CreateProcessAsUser(LoggedInUserToken, AppName, string.Empty, ref processAttributes, ref threadAttributes, true, dwCreationFlags, ConsoleEnvironment, AppName.Substring(0, AppName.LastIndexOf('\\')), ref si, out pi))
+            {
+                eventLog1.WriteEntry("CreateProcessAsUser returned false, could not create Fractal Protocol process as console user w/ error code: " + GetLastError().ToString());
+                RevertToSelf(); // revert impersonation
+                DestroyEnvironmentBlock(ConsoleEnvironment);
+                CloseHandle(LoggedInUserToken);
+                CloseHandle(DuplicatedToken);
+                return false;
+            }
+             eventLog1.WriteEntry("CreateProcessAsUser worked, Fractal Protocol server process created as console - End of LaunchConsoleProcess.");
+
+
+
+
+
+            /*
+            //Below part for increasing the UAC previleges to the token.
+            TokPriv1Luid tp = new TokPriv1Luid();
+            tp.Count = 1;
+            tp.Luid = 0;
+            if (!LookupPrivilegeValue(null, SE_INCREASE_QUOTA_NAME, ref tp.Luid))
+            {
+                eventLog1.WriteEntry("LookupPrivilegeValue failed: " + GetLastError().ToString());
+                return;
+            }
+
+            tp.Attr = SE_PRIVILEGE_ENABLED;
+            if (!AdjustTokenPrivileges(LoggedInUserToken, false, ref tp, 0, IntPtr.Zero, IntPtr.Zero))
+            {
+                eventLog1.WriteEntry("AdjustTokenPrivileges failed: " + GetLastError().ToString());
+                return;
+            }
+            */
+
+
+
+
+            /*
             // Obtain the console user token, we will duplicate it to "fake" being in the console
             if (!WTSQueryUserToken(consoleID, out LoggedInUserToken))
             {
@@ -449,7 +681,15 @@ namespace FractalService
                 CloseHandle(LoggedInUserToken);
                 return;
             }
-           // eventLog1.WriteEntry("WTSQueryUserToken worked, Console user token is: " + LoggedInUserToken.ToString());
+           eventLog1.WriteEntry("WTSQueryUserToken worked, Console user token is: " + LoggedInUserToken.ToString());
+
+
+
+            // test
+            eventLog1.WriteEntry("test for inequality: " + (LoggedInUserToken == LoggedInToken1).ToString());
+
+
+
 
             // Create new security attribute struct that will be filled when we duplicate the token to a primary token
             SECURITY_ATTRIBUTES sa = new SECURITY_ATTRIBUTES();
@@ -478,6 +718,9 @@ namespace FractalService
             }
             // eventLog1.WriteEntry("ImpersonateLoggedOnUser worked, console user impersonated on DuplicatedToken.");
 
+            */
+
+            /*
             // Create the environment block from the console process that the new process will spawn into
             uint dwCreationFlags = NORMAL_PRIORITY_CLASS | CREATE_NEW_CONSOLE;
             if (!CreateEnvironmentBlock(out ConsoleEnvironment, DuplicatedToken, true))
@@ -510,10 +753,13 @@ namespace FractalService
             }
             // eventLog1.WriteEntry("CreateProcessAsUser worked, Fractal Protocol server process created as console - End of LaunchConsoleProcess.");
 
+               */
+
             // Store the process handle in a global var
             ProcessHandle = pi.hProcess;
 
             // Done with initiating the service, now we monitor the process to restart it if it crashes
+            return true;
         }
 
         // Thread function to monitor a process and restart it if it crashed
