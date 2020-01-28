@@ -2,7 +2,7 @@
 
 This repository contains the code for the Fractal Service which is installed on every Fractal cloud computer and runs at startup to log the computer into the console session (session 0) with Admin privileges, disable the Windows lock screen and start/monitor the Fractal protocol executable, starting/restarting it if necessary so that it is always running.
 
-This code is all in Visual C# and requires Visual Studio with the .NET Framework 4.7+ for building. Simply build the service by clicking on "Build" in Visual Studio after opening the .sln file.
+This code is all in Visual C# and requires Visual Studio with the .NET Framework 4.7+ for building. Simply build the service by clicking on "Build" in Visual Studio after opening the .sln file. On a non-dev VMs, another service installer should be used as installutil is part of the .NET Visual Studio framework.
 
 The service then needs to be installed. Navigate to the .exe directory, which should be under `fractal-service/FractalService/FractalService/bin/Debug` and install it by running `installutil FractalService.exe`.
 

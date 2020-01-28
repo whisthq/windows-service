@@ -3,6 +3,7 @@ using System.ServiceProcess;
 using System.Security;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Diagnostics;
 
 // Fractal Service namespace
 namespace FractalService
@@ -18,6 +19,22 @@ namespace FractalService
         internal const int NORMAL_PRIORITY_CLASS = 0x20;
         internal const int CREATE_NEW_CONSOLE = 0x00000010;
 
+        // Generic access flags
+        internal const int GENERIC_WRITE = 0x40000000;
+        internal const int GENERIC_EXECUTE = 0x20000000;
+        internal const int GENERIC_ALL_ACCESS = 0x10000000;
+
+        // Desktop-specific access flags
+        internal const int DESKTOP_READOBJECTS = 0x0001;
+        internal const int DESKTOP_CREATEWINDOW = 0x0002;
+        internal const int DESKTOP_CREATEMENU = 0x0004;
+        internal const int DESKTOP_HOOKCONTROL = 0x0008;
+        internal const int DESKTOP_JOURNALRECORD = 0x0010;
+        internal const int DESKTOP_JOURNALPLAYBACK = 0x0020;
+        internal const int DESKTOP_ENUMERATE = 0x0040;
+        internal const int DESKTOP_WRITEOBJECTS = 0x0080;
+        internal const int DESKTOP_SWITCHDESKTOP = 0x0100;
+
         public const uint STANDARD_RIGHTS_REQUIRED = 0x000F0000;
         public const uint STANDARD_RIGHTS_READ = 0x00020000;
         public const uint TOKEN_ASSIGN_PRIMARY = 0x0001;
@@ -30,23 +47,22 @@ namespace FractalService
         public const uint TOKEN_ADJUST_DEFAULT = 0x0080;
         public const uint TOKEN_ADJUST_SESSIONID = 0x0100;
         public const uint TOKEN_READ = (STANDARD_RIGHTS_READ | TOKEN_QUERY);
-        public const uint TOKEN_ALL_ACCESS = (STANDARD_RIGHTS_REQUIRED | TOKEN_ASSIGN_PRIMARY | TOKEN_DUPLICATE |
-                                              TOKEN_IMPERSONATE | TOKEN_QUERY | TOKEN_QUERY_SOURCE |
-                                              TOKEN_ADJUST_PRIVILEGES | TOKEN_ADJUST_GROUPS | TOKEN_ADJUST_DEFAULT |
-                                              TOKEN_ADJUST_SESSIONID);
+        public const uint TOKEN_ALL_ACCESS = (STANDARD_RIGHTS_REQUIRED | TOKEN_ASSIGN_PRIMARY |
+                                              TOKEN_DUPLICATE | TOKEN_IMPERSONATE |
+                                              TOKEN_QUERY | TOKEN_QUERY_SOURCE |
+                                              TOKEN_ADJUST_PRIVILEGES | TOKEN_ADJUST_GROUPS |
+                                              TOKEN_ADJUST_DEFAULT | TOKEN_ADJUST_SESSIONID);
 
         internal const uint INFINITE = 0xFFFFFFFF;
         internal const uint WAIT_ABANDONED = 0x00000080;
         internal const uint WAIT_OBJECT_0 = 0x00000000;
         internal const uint WAIT_TIMEOUT = 0x00000102;
-        internal const uint STILL_ACTIVE = 259; // for GetExitCode
 
         internal const string SE_SHUTDOWN_NAME = "SeShutdownPrivilege";
         internal const string SE_TCB_NAME = "SeTcbPrivilege";
         internal const string SE_RESTORE_NAME = "SeRestorePrivilege";
         internal const string SE_INCREASE_QUOTA_NAME = "SeIncreaseQuotaPrivilege";
-
-        IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
+        internal const string SE_DEBUG_NAME = "SeDebugPrivilege";
         #endregion
 
         #region Structs & Enums
@@ -257,6 +273,78 @@ namespace FractalService
             MaxTokenInfoClass
         }
 
+        enum ShowWindowCommands
+        {
+            /// <summary>
+            /// Hides the window and activates another window.
+            /// </summary>
+            Hide = 0,
+            /// <summary>
+            /// Activates and displays a window. If the window is minimized or
+            /// maximized, the system restores it to its original size and position.
+            /// An application should specify this flag when displaying the window
+            /// for the first time.
+            /// </summary>
+            Normal = 1,
+            /// <summary>
+            /// Activates the window and displays it as a minimized window.
+            /// </summary>
+            ShowMinimized = 2,
+            /// <summary>
+            /// Maximizes the specified window.
+            /// </summary>
+            Maximize = 3, // is this the right value?
+            /// <summary>
+            /// Activates the window and displays it as a maximized window.
+            /// </summary>      
+            ShowMaximized = 3,
+            /// <summary>
+            /// Displays a window in its most recent size and position. This value
+            /// is similar to <see //cref="Win32.ShowWindowCommand.Normal"/>, except
+            /// the window is not activated.
+            /// </summary>
+            ShowNoActivate = 4,
+            /// <summary>
+            /// Activates the window and displays it in its current size and position.
+            /// </summary>
+            Show = 5,
+            /// <summary>
+            /// Minimizes the specified window and activates the next top-level
+            /// window in the Z order.
+            /// </summary>
+            Minimize = 6,
+            /// <summary>
+            /// Displays the window as a minimized window. This value is similar to
+            /// <see //cref="Win32.ShowWindowCommand.ShowMinimized"/>, except the
+            /// window is not activated.
+            /// </summary>
+            ShowMinNoActive = 7,
+            /// <summary>
+            /// Displays the window in its current size and position. This value is
+            /// similar to <see //cref="Win32.ShowWindowCommand.Show"/>, except the
+            /// window is not activated.
+            /// </summary>
+            ShowNA = 8,
+            /// <summary>
+            /// Activates and displays the window. If the window is minimized or
+            /// maximized, the system restores it to its original size and position.
+            /// An application should specify this flag when restoring a minimized window.
+            /// </summary>
+            Restore = 9,
+            /// <summary>
+            /// Sets the show state based on the SW_* value specified in the
+            /// STARTUPINFO structure passed to the CreateProcess function by the
+            /// program that started the application.
+            /// </summary>
+            ShowDefault = 10,
+            /// <summary>
+            ///  <b>Windows 2000/XP:</b> Minimizes a window, even if the thread
+            /// that owns the window is not responding. This flag should only be
+            /// used when minimizing windows from a different thread.
+            /// </summary>
+            ForceMinimize = 11
+        }
+
         [StructLayout(LayoutKind.Sequential)]
         public struct PROCESSENTRY32
         {
@@ -301,7 +389,7 @@ namespace FractalService
         struct TOKEN_PRIVILEGES
         {
             public int PrivilegeCount;
-            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 3)] // arbitrary size
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 1)] // valid for 1 privilege
             public LUID_AND_ATTRIBUTES[] Privileges;
         }
 
@@ -321,11 +409,51 @@ namespace FractalService
             QueryLimitedInformation = 0x00001000,
             Synchronize = 0x00100000
         }
+
+        enum CreateProcessFlags
+        {
+            CREATE_BREAKAWAY_FROM_JOB = 0x01000000,
+            CREATE_DEFAULT_ERROR_MODE = 0x04000000,
+            CREATE_NEW_CONSOLE = 0x00000010,
+            CREATE_NEW_PROCESS_GROUP = 0x00000200,
+            CREATE_NO_WINDOW = 0x08000000,
+            CREATE_PROTECTED_PROCESS = 0x00040000,
+            CREATE_PRESERVE_CODE_AUTHZ_LEVEL = 0x02000000,
+            CREATE_SEPARATE_WOW_VDM = 0x00000800,
+            CREATE_SHARED_WOW_VDM = 0x00001000,
+            CREATE_SUSPENDED = 0x00000004,
+            CREATE_UNICODE_ENVIRONMENT = 0x00000400,
+            DEBUG_ONLY_THIS_PROCESS = 0x00000002,
+            DEBUG_PROCESS = 0x00000001,
+            DETACHED_PROCESS = 0x00000008,
+            EXTENDED_STARTUPINFO_PRESENT = 0x00080000,
+            INHERIT_PARENT_AFFINITY = 0x00010000,
+            INHERIT_CALLER_PRIORITY = 0x10000000
+        }
+
+        public enum TOKEN_TYPE
+        {
+            TokenPrimary = 1,
+            TokenImpersonation
+        }
+
+        enum SECURITY_IMPERSONATION_LEVEL
+        {
+            SecurityAnonymous,
+            SecurityIdentification,
+            SecurityImpersonation,
+            SecurityDelegation
+        }
         #endregion
 
         #region DLL Imports
         [DllImport("shell32.dll")]
-        static extern IntPtr ShellExecute(IntPtr hwnd, string lpOperation, string lpFile, string lpParameters, string lpDirectory, ShowCommands nShowCmd);
+        static extern IntPtr ShellExecute(IntPtr hwnd,
+                                          string lpOperation,
+                                          string lpFile,
+                                          string lpParameters,
+                                          string lpDirectory,
+                                          ShowCommands nShowCmd);
         
         [DllImport("advapi32.dll", SetLastError = true)]
         private static extern bool SetServiceStatus(IntPtr handle, ref ServiceStatus serviceStatus);
@@ -333,14 +461,22 @@ namespace FractalService
         [DllImport("advapi32.dll", SetLastError = true)]
         static extern int ImpersonateLoggedOnUser(IntPtr hToken);
 
-        [DllImport("advapi32.dll", SetLastError = true)]
-        internal static extern bool LookupPrivilegeValue(string host, string name, ref long pluid);
-
-        [DllImport("advapi32.dll", ExactSpelling = true, SetLastError = true)]
-        internal static extern bool AdjustTokenPrivileges(IntPtr htok, bool disall, ref TokPriv1Luid newst, int len, IntPtr prev, IntPtr relen);
+        [DllImport("advapi32.dll")]
+        static extern bool LookupPrivilegeValue(string lpSystemName, string lpName, ref LUID lpLuid);
 
         [DllImport("advapi32.dll", SetLastError = true)]
-        static extern bool SetTokenInformation(IntPtr TokenHandle, TOKEN_INFORMATION_CLASS TokenInformationClass, ref uint TokenInformation, uint TokenInformationLength);
+        static extern bool AdjustTokenPrivileges(IntPtr TokenHandle,
+                                                 bool DisableAllPrivileges,
+                                                 ref TOKEN_PRIVILEGES NewState,
+                                                 uint Zero,
+                                                 IntPtr Null1,
+                                                 IntPtr Null2);
+
+        [DllImport("advapi32.dll", SetLastError = true)]
+        static extern bool SetTokenInformation(IntPtr TokenHandle,
+                                               TOKEN_INFORMATION_CLASS TokenInformationClass,
+                                               ref uint TokenInformation,
+                                               uint TokenInformationLength);
 
         [DllImport("kernel32.dll", SetLastError = true), SuppressUnmanagedCodeSecurity]
         static extern bool CloseHandle(IntPtr handle);
@@ -352,16 +488,27 @@ namespace FractalService
         static extern bool WTSQueryUserToken(uint sessionID, out IntPtr hToken);
 
         [DllImport("advapi32.dll", SetLastError = true)]
-        static extern bool OpenProcessToken(IntPtr ProcessHandle, uint DesiredAccess, out IntPtr TokenHandle);
+        static extern bool OpenProcessToken(IntPtr ProcessHandle,
+                                            uint DesiredAccess,
+                                            out IntPtr TokenHandle);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern IntPtr OpenProcess(ProcessAccessFlags processAccess, bool bInheritHandle, uint processId);
+        public static extern IntPtr OpenProcess(ProcessAccessFlags processAccess,
+                                                bool bInheritHandle,
+                                                uint processId);
 
         [DllImport("advapi32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        public extern static bool DuplicateToken(IntPtr ExistingTokenHandle, int SECURITY_IMPERSONATION_LEVEL, ref IntPtr DuplicateTokenHandle);
+        public extern static bool DuplicateToken(IntPtr ExistingTokenHandle,
+                                                 int SECURITY_IMPERSONATION_LEVEL,
+                                                 ref IntPtr DuplicateTokenHandle);
 
-        [DllImport("advapi32.dll", EntryPoint = "DuplicateTokenEx")]
-        static extern bool DuplicateTokenEx(IntPtr hExistingToken, int dwDesiredAccess, ref SECURITY_ATTRIBUTES lpThreadAttributes, int ImpersonationLevel, int dwTokenType, ref IntPtr phNewToken);
+        [DllImport("advapi32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private extern static bool DuplicateTokenEx(IntPtr hExistingToken,
+                                                    uint dwDesiredAccess,
+                                                    ref SECURITY_ATTRIBUTES lpTokenAttributes,
+                                                    SECURITY_IMPERSONATION_LEVEL ImpersonationLevel,
+                                                    TOKEN_TYPE TokenType,
+                                                    out IntPtr phNewToken);
 
         [DllImport("userenv.dll", SetLastError = true)]
         static extern bool CreateEnvironmentBlock(out IntPtr lpEnvironment, IntPtr hToken, bool bInherit);
@@ -370,8 +517,18 @@ namespace FractalService
         static extern bool DestroyEnvironmentBlock(IntPtr lpEnvironment);
 
         [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-        static extern bool CreateProcessAsUser(IntPtr hToken, string lpApplicationName, string lpCommandLine, ref SECURITY_ATTRIBUTES lpProcessAttributes, ref SECURITY_ATTRIBUTES lpThreadAttributes, bool bInheritHandles, uint dwCreationFlags, IntPtr lpEnvironment, string lpCurrentDirectory, ref STARTUPINFO lpStartupInfo, out PROCESS_INFORMATION lpProcessInformation);
-        
+        static extern bool CreateProcessAsUser(IntPtr hToken,
+                                               string lpApplicationName,
+                                               string lpCommandLine,
+                                               ref SECURITY_ATTRIBUTES lpProcessAttributes,
+                                               ref SECURITY_ATTRIBUTES lpThreadAttributes,
+                                               bool bInheritHandles,
+                                               uint dwCreationFlags,
+                                               IntPtr lpEnvironment,
+                                               string lpCurrentDirectory,
+                                               ref STARTUPINFO lpStartupInfo,
+                                               out PROCESS_INFORMATION lpProcessInformation);
+
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool TerminateProcess(IntPtr hProcess, uint uExitCode);
 
@@ -398,12 +555,19 @@ namespace FractalService
 
         [DllImport("kernel32.dll")]
         static extern bool ProcessIdToSessionId(uint dwProcessId, out uint pSessionId);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern IntPtr OpenInputDesktop(uint dwFlags, bool fInherit, uint dwDesiredAccess);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern bool SetThreadDesktop(IntPtr hDesktop);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern bool CloseDesktop(IntPtr hDesktop);
         #endregion
 
         // Service global variables
         bool service_is_running = true; // to know whether to monitor the service
-        bool bElevate = true; // to know whether to elevate privileges
-        IntPtr ConsoleEnvironment = IntPtr.Zero; // environment block handle
         PROCESS_INFORMATION pi; // variable holding the created process handles
 
         // Fractal Service initialization
@@ -426,9 +590,11 @@ namespace FractalService
             eventLog1.WriteEntry("In OnStart - Starting the service.");
 
             // Update the service state to Start Pending.
-            ServiceStatus serviceStatus = new ServiceStatus();
-            serviceStatus.dwCurrentState = ServiceState.SERVICE_START_PENDING;
-            serviceStatus.dwWaitHint = 100000;
+            ServiceStatus serviceStatus = new ServiceStatus
+            {
+                dwCurrentState = ServiceState.SERVICE_START_PENDING,
+                dwWaitHint = 100000
+            };
             SetServiceStatus(this.ServiceHandle, ref serviceStatus);
 
             // Update the service state to Running.
@@ -441,7 +607,7 @@ namespace FractalService
                 eventLog1.WriteEntry("Failed to launch Fractal Protocol as console process w/ error code: " + GetLastError().ToString());
                 return;
             }
-            eventLog1.WriteEntry("Successfully launched Fractal Protocol as console process.");
+            // eventLog1.WriteEntry("Successfully launched Fractal Protocol as console process.");
 
             // Create new thread to monitor the Fractal Protocol server process, and restart it if it crashed
             Thread processMonitor = new Thread(MonitorProcess);
@@ -460,18 +626,16 @@ namespace FractalService
             // Set service is running to false to stop monitoring process
             service_is_running = false;
 
-            // Revert the impersonation
-            RevertToSelf();
-
-            // Destroy the environment block and close the process handles
-            DestroyEnvironmentBlock(ConsoleEnvironment);
+            // Close the process handles
             CloseHandle(pi.hThread);
             CloseHandle(pi.hProcess);
 
             // Update the service state to Stop Pending.
-            ServiceStatus serviceStatus = new ServiceStatus();
-            serviceStatus.dwCurrentState = ServiceState.SERVICE_STOP_PENDING;
-            serviceStatus.dwWaitHint = 100000;
+            ServiceStatus serviceStatus = new ServiceStatus
+            {
+                dwCurrentState = ServiceState.SERVICE_STOP_PENDING,
+                dwWaitHint = 100000
+            };
             SetServiceStatus(this.ServiceHandle, ref serviceStatus);
 
             // Update the service state to Stopped.
@@ -482,200 +646,152 @@ namespace FractalService
             eventLog1.WriteEntry("In OnStop - Service stopped.");
         }
 
-
-
-
-
-
         // Launches the Fractal Protocol server as a console process to run on headless VM
         public bool LaunchConsoleProcess()
         {
             // For debugging
             eventLog1.WriteEntry("In LaunchConsoleProcess - Starting the Process.");
 
-            // Function variables
-            bool bResult = false;
-            uint consoleSessionId;
-            uint winlogonPid = 0; // dummy init value
-            IntPtr hUserToken = IntPtr.Zero;
-            IntPtr hUserTokenDup = IntPtr.Zero;
-            IntPtr hPToken = IntPtr.Zero;
-            IntPtr hProcess = IntPtr.Zero;
-
-            // Obtain the console ID, should be 1             
-            consoleSessionId = WTSGetActiveConsoleSessionId();
-            eventLog1.WriteEntry("Console session ID is: " + consoleSessionId.ToString()); // for debugging
-
-            // Find the winlogon process
-            PROCESSENTRY32 procEntry = new PROCESSENTRY32();
-
-            // Create the snapshot tool
-            IntPtr handleToSnapshot = CreateToolhelp32Snapshot((uint) SnapshotFlags.Process, 0);
-            if (handleToSnapshot == INVALID_HANDLE_VALUE)
+            // Grab the winlogon process
+            Process winLogon = null;
+            foreach (Process p in Process.GetProcesses())
             {
-                eventLog1.WriteEntry("CreateToolhelp32Snapshot failed w/ error code: " + GetLastError().ToString());
-                return false;
-            }
-            eventLog1.WriteEntry("CreateToolhelp32Snapshot succeeded.");
-
-            // Get the size of the process
-            procEntry.dwSize = (uint) Marshal.SizeOf(procEntry); // sizeof(PROCESSENTRY32);
-
-            // gGt the first process from that snapshot, should contain winlogon
-            if (!Process32First(handleToSnapshot, ref procEntry))
-            {
-                eventLog1.WriteEntry("Process32First failed w/ error code: " + GetLastError().ToString());
-                return false;
-            }
-            eventLog1.WriteEntry("Process32First succeeded.");
-
-            // Loop over the indices of that first process and check if it is winlogon
-            string strCmp = "winlogon.exe";
-            do
-            {
-                if (strCmp.IndexOf(procEntry.szExeFile) == 0)
+                if (p.ProcessName.Contains("winlogon"))
                 {
-                    // We found a Winlogon process... make sure it's running in the console session
-                    if (ProcessIdToSessionId(procEntry.th32ProcessID, out uint winlogonSessId) && winlogonSessId == consoleSessionId)
-                    {
-                        // It is, save the process ID and exit
-                        winlogonPid = procEntry.th32ProcessID;
-                        eventLog1.WriteEntry("Found Winlogon in console session, PID is: " + winlogonPid.ToString());
-                        break;
-                    }
+                    // Winlogon found, save the process
+                    // eventLog1.WriteEntry("Found Winlogon in console session.");
+                    winLogon = p;
+                    break;
                 }
-            } while (Process32Next(handleToSnapshot, ref procEntry));
+            }
 
-            // Ensure we found a Winlogon PID by comparing to dummy init value
-            if (winlogonPid == 0)
+            // Ensure we found winlogon
+            if (winLogon == null)
             {
                 eventLog1.WriteEntry("Could not find Winlogon in console session.");
-                CloseHandle(handleToSnapshot);
                 return false;
             }
 
-            // Get the user token used by DuplicateTokenEx in the console session
-            if (!WTSQueryUserToken(consoleSessionId, out hUserToken))
-            {
-                eventLog1.WriteEntry("WTSQueryUserToken failed w/ error code: " + GetLastError().ToString());
-                CloseHandle(handleToSnapshot);
-                return false;
-            }
-            eventLog1.WriteEntry("WTSQueryUserToken succeeded, user token is: " + hUserToken.ToString());
-
-            // Set variables for defining the new process
-            STARTUPINFO si = new STARTUPINFO();
-            si.cb = (uint) Marshal.SizeOf(si);
-            si.lpDesktop = "winsta0\\default"; // crucial to run the process in console with interactive desktop
-            TOKEN_PRIVILEGES tp = new TOKEN_PRIVILEGES();
-            LUID luid = new LUID();
-
-            // Open the winlogon process
-            hProcess = OpenProcess(ProcessAccessFlags.All, false, winlogonPid);
-            if (hProcess == IntPtr.Zero)
-            {
-                eventLog1.WriteEntry("OpenProcess failed w/ error code: " + GetLastError().ToString());
-                CloseHandle(hUserToken);
-                CloseHandle(handleToSnapshot);
-                return false;
-            }
-            eventLog1.WriteEntry("OpenProcess succeeded.");
-
-            // Open the token of the winlogon process
-            if (!OpenProcessToken(hProcess, TOKEN_ALL_ACCESS, out hPToken))
+            // Grab the winlogon's token
+            if (!OpenProcessToken(winLogon.Handle, TOKEN_QUERY | TOKEN_IMPERSONATE | TOKEN_DUPLICATE, out IntPtr userToken))
             {
                 eventLog1.WriteEntry("OpenProcessToken failed w/ error code: " + GetLastError().ToString());
-                CloseHandle(hProcess);
-                CloseHandle(hUserToken);
-                CloseHandle(handleToSnapshot);
                 return false;
             }
-            eventLog1.WriteEntry("OpenProcessToken succeeded.");
+            // eventLog1.WriteEntry("OpenProcessToken succeeded, opened token is: " + userToken.ToString());
 
+            // Set token security attributes
+            SECURITY_ATTRIBUTES tokenAttributes = new SECURITY_ATTRIBUTES();
+            tokenAttributes.nLength = Marshal.SizeOf(tokenAttributes);
 
+            // Set token thread attributes
+            SECURITY_ATTRIBUTES threadAttributes = new SECURITY_ATTRIBUTES();
+            threadAttributes.nLength = Marshal.SizeOf(threadAttributes);
 
-
-
-
-
-
-
-            // IntPtr LoggedInUserToken = IntPtr.Zero; == hUserToken
-            IntPtr DuplicatedToken = IntPtr.Zero;
-
-
-  
-            // eventLog1.WriteEntry("WTSQueryUserToken worked, Console user token is: " + LoggedInUserToken.ToString());
-            // Create new security attribute struct that will be filled when we duplicate the token to a primary token
-            SECURITY_ATTRIBUTES sa = new SECURITY_ATTRIBUTES();
-            // Duplicate the console token to a primary token so we can use it to create a new process
-            // 2 = SECURITY_IMPERSONATION
-            // 1 = TOKEN_PRIMARY
-            if (!DuplicateTokenEx(hUserToken, MAXIMUM_ALLOWED, ref sa, 2, 1, ref DuplicatedToken))
+            // Duplicate the winlogon token to the new token
+            if (!DuplicateTokenEx(userToken,                                           // token to duplicate
+                                  GENERIC_ALL_ACCESS,                                  // access rights
+                                  ref tokenAttributes,                                 // token security attributes
+                                  SECURITY_IMPERSONATION_LEVEL.SecurityIdentification, // security impersonation level
+                                  TOKEN_TYPE.TokenPrimary,                             // duplicated token type
+                                  out IntPtr newToken))                                // handle to receive the duplicated token
             {
-                // FALSE returned, failed to duplicate the console user token
-                eventLog1.WriteEntry("DuplicateTokenEx returned false, could not duplicate console user token w/ error code: " + GetLastError().ToString());
-                CloseHandle(DuplicatedToken);
-                CloseHandle(hUserToken);
+                eventLog1.WriteEntry("DuplicateTokenEx failed w/ error code: " + GetLastError().ToString());
+                CloseHandle(userToken);
                 return false;
             }
-            // eventLog1.WriteEntry("DuplicateTokenEx worked, Duplicated token is: " + DuplicatedToken.ToString());
-            // Impersonate the console user on our duplicated token to have console privileges
-            if (ImpersonateLoggedOnUser(DuplicatedToken) == 0)
+            // eventLog1.WriteEntry("DuplicateTokenEx succeeded, duplicated token is: " + newToken.ToString());
+
+            // Create token privileges structure
+            TOKEN_PRIVILEGES tokPrivs = new TOKEN_PRIVILEGES
             {
-                // 0 returned, failed to impersonate console user token
-                eventLog1.WriteEntry("ImpersonateLoggedOnUser returned 0, could not impersonate console user token w/ error code: " + GetLastError().ToString());
-                CloseHandle(hUserToken);
-                CloseHandle(DuplicatedToken);
+                PrivilegeCount = 1
+            };
+            LUID seDebugNameValue = new LUID();
+
+            // Lookup the existing token privileges so we can adjust them after
+            if (!LookupPrivilegeValue(null, SE_DEBUG_NAME, ref seDebugNameValue)) // null attempts to find privileges on LOCAL_SYSTEM
+            {
+                eventLog1.WriteEntry("LookupPrivilegeValue failed w/ error code: " + GetLastError().ToString());
+                CloseHandle(newToken);
+                CloseHandle(userToken);
                 return false;
             }
-            // eventLog1.WriteEntry("ImpersonateLoggedOnUser worked, console user impersonated on DuplicatedToken.");
-            // Create the environment block from the console process that the new process will spawn into
-            uint dwCreationFlags = NORMAL_PRIORITY_CLASS | CREATE_NEW_CONSOLE;
-            if (!CreateEnvironmentBlock(out ConsoleEnvironment, DuplicatedToken, true))
+            // eventLog1.WriteEntry("LookupPrivilegeValue succeeded.");
+
+            // Fill token privileges structure with the existing privileges + SE_ENABLED
+            tokPrivs.Privileges = new LUID_AND_ATTRIBUTES[1];
+            tokPrivs.Privileges[0].Luid = seDebugNameValue;
+            tokPrivs.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+
+            // Escalate the new token's privileges
+            if (!AdjustTokenPrivileges(newToken, false, ref tokPrivs, 0, IntPtr.Zero, IntPtr.Zero))
             {
-                eventLog1.WriteEntry("CreateEnvironmentBlock returned false, could not create environment block from DuplicatedToken w/ error code: " + GetLastError().ToString());
+                eventLog1.WriteEntry("AdjustTokenPrivileges failed w/ error code: " + GetLastError().ToString());
+                CloseHandle(newToken);
+                CloseHandle(userToken);
+                return false;
+            }
+            eventLog1.WriteEntry("AdjustTokenPrivilege succeeded.");
+
+            // Path of the Fractal Protocol executable
+            string AppName = "C:\\Program Files\\Fractal\\fractal-protocol\\server\\server.exe";
+
+            // Initialize the process structure
+            pi = new PROCESS_INFORMATION();
+
+            // Initialize the process startup info and set it to Winlogon to run on the lock screen
+            STARTUPINFO si = new STARTUPINFO();
+            si.cb = (uint) Marshal.SizeOf(si);
+            si.lpDesktop = null;
+
+            //si.lpDesktop = "Winsta0\\default";
+            //si.lpDesktop = "Winsta0\\Winlogon";
+            //si.dwFlags = STARTF_USESHOWWINDOW;
+            //si.wShowWindow = (short) ShowWindowCommands.Show;
+
+            // CreateProcess flags
+            uint dwCreationFlags = (uint) CreateProcessFlags.CREATE_NEW_CONSOLE | (uint) CreateProcessFlags.INHERIT_CALLER_PRIORITY;
+
+            // Launch the process in the client's logon session using the new token
+            if (!CreateProcessAsUser(newToken,                // client's access token
+                                     AppName,                 // file to execute
+                                     null,                    // command line
+                                     ref tokenAttributes,     // pointer to process SECURITY_ATTRIBUTES
+                                     ref threadAttributes,    // pointer to thread SECURITY_ATTRIBUTES
+                                     false,                    // handles are not inheritable
+                                     dwCreationFlags,         // creation flags
+                                     IntPtr.Zero,             // pointer to new environment block 
+                                     null,                    // name of current directory 
+                                     ref si,                  // pointer to STARTUPINFO structure
+                                     out pi))                 // receives information about new process
+            {
+                eventLog1.WriteEntry("CreateProcessAsUser failed w/ error code: " + GetLastError().ToString());
+                CloseHandle(newToken);
+                CloseHandle(userToken);
+                return false;
+            }
+            eventLog1.WriteEntry("CreateProcessAsUser succeeded.");
+
+            // Confirm the process is running
+            Process _p = Process.GetProcessById((int) pi.dwProcessId);
+            if (_p != null)
+            {
+                eventLog1.WriteEntry("Found our process with ID: " + _p.Id + " and name: " + _p.ProcessName);
             }
             else
             {
-                // if it suceeded, we don't create a new console
-                dwCreationFlags |= CREATE_UNICODE_ENVIRONMENT;
-                // eventLog1.WriteEntry("CreateEnvironmentBlock worked, environment block created from DuplicatedToken");
+                EventLog.WriteEntry("Process not found.");
             }
-            // Prepare the parameters for creating a process in the console that launches the Fractal Protocol server
-            string AppName = "C:\\Windows\\System32\\notepad.exe"; // TODO: replace with protocol executable
-            SECURITY_ATTRIBUTES processAttributes = new SECURITY_ATTRIBUTES();
-            SECURITY_ATTRIBUTES threadAttributes = new SECURITY_ATTRIBUTES();
-            //PROCESS_INFORMATION pi; // process
-            STARTUPINFO si2 = new STARTUPINFO(); // startup info
-            // Create a process as a console user for Fractal Protocol server
-            if (!CreateProcessAsUser(DuplicatedToken, AppName, string.Empty, ref processAttributes, ref threadAttributes, true, dwCreationFlags, ConsoleEnvironment, AppName.Substring(0, AppName.LastIndexOf('\\')), ref si2, out pi))
-            {
-                eventLog1.WriteEntry("CreateProcessAsUser returned false, could not create Fractal Protocol process as console user.");
-                RevertToSelf(); // revert impersonation
-                DestroyEnvironmentBlock(ConsoleEnvironment);
-                CloseHandle(hUserToken);
-                CloseHandle(DuplicatedToken);
-                return false;
-            }
-            eventLog1.WriteEntry("CreateProcessAsUser worked, Fractal Protocol server process created as console - End of LaunchConsoleProcess.");
-            // eventLog1.WriteEntry("CreateProcessAsUser worked, Fractal Protocol server process created as console - End of LaunchConsoleProcess.");
+            
+            // Close handles task now that the process is launched, process information is in PROCESS_INFORMATION pi
+            CloseHandle(newToken);
+            CloseHandle(userToken);
 
-            // Store the process handle in a global var
-            //ProcessHandle = pi.hProcess;
-            // Done with initiating the service, now we monitor the process to restart it if it crashes
+            // Done launching the console process
+            eventLog1.WriteEntry("Console Process launched - End of LaunchConsoleProcess.");
             return true;
         }
-
-
-
-
-
-
-
-
-
-
 
         // Monitors the launched process and restart it if it crashes
         public void MonitorProcess()
@@ -691,13 +807,6 @@ namespace FractalService
                 {
                     // For debugging
                     eventLog1.WriteEntry("Application crashed, restarting a new process.");
-
-                    // Revert impersonation
-                    RevertToSelf();
-
-                    // Destroy the environment
-                    DestroyEnvironmentBlock(ConsoleEnvironment);
-                    ConsoleEnvironment = IntPtr.Zero;
 
                     // Reset the PROCESS_INFORMATION handles
                     pi.hProcess = IntPtr.Zero;
