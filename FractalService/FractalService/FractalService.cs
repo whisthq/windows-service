@@ -732,7 +732,7 @@ namespace FractalService
                 CloseHandle(userToken);
                 return false;
             }
-            eventLog1.WriteEntry("AdjustTokenPrivilege succeeded.");
+            // eventLog1.WriteEntry("AdjustTokenPrivilege succeeded.");
 
             // Path of the Fractal Protocol executable
             string AppName = "C:\\Program Files\\Fractal\\fractal-protocol\\server\\server.exe";
@@ -751,7 +751,7 @@ namespace FractalService
             //si.wShowWindow = (short) ShowWindowCommands.Show;
 
             // CreateProcess flags
-            uint dwCreationFlags = (uint) CreateProcessFlags.CREATE_NEW_CONSOLE | (uint) CreateProcessFlags.INHERIT_CALLER_PRIORITY;
+            uint dwCreationFlags = (uint) CreateProcessFlags.INHERIT_CALLER_PRIORITY | (uint) CreateProcessFlags.DETACHED_PROCESS;
 
             // Launch the process in the client's logon session using the new token
             if (!CreateProcessAsUser(newToken,                // client's access token
@@ -771,7 +771,7 @@ namespace FractalService
                 CloseHandle(userToken);
                 return false;
             }
-            eventLog1.WriteEntry("CreateProcessAsUser succeeded.");
+            // eventLog1.WriteEntry("CreateProcessAsUser succeeded.");
 
             // Confirm the process is running
             Process _p = Process.GetProcessById((int) pi.dwProcessId);
