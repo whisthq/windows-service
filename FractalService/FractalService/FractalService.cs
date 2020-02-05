@@ -444,75 +444,6 @@ namespace FractalService
             SecurityImpersonation,
             SecurityDelegation
         }
-
-        public enum LogonType
-        {
-            /// <summary>
-            /// This logon type is intended for users who will be interactively using the computer, such as a user being logged on  
-            /// by a terminal server, remote shell, or similar process.
-            /// This logon type has the additional expense of caching logon information for disconnected operations;
-            /// therefore, it is inappropriate for some client/server applications,
-            /// such as a mail server.
-            /// </summary>
-            LOGON32_LOGON_INTERACTIVE = 2,
-
-            /// <summary>
-            /// This logon type is intended for high performance servers to authenticate plaintext passwords.
-
-            /// The LogonUser function does not cache credentials for this logon type.
-            /// </summary>
-            LOGON32_LOGON_NETWORK = 3,
-
-            /// <summary>
-            /// This logon type is intended for batch servers, where processes may be executing on behalf of a user without
-            /// their direct intervention. This type is also for higher performance servers that process many plaintext
-            /// authentication attempts at a time, such as mail or Web servers.
-            /// The LogonUser function does not cache credentials for this logon type.
-            /// </summary>
-            LOGON32_LOGON_BATCH = 4,
-
-            /// <summary>
-            /// Indicates a service-type logon. The account provided must have the service privilege enabled.
-            /// </summary>
-            LOGON32_LOGON_SERVICE = 5,
-
-            /// <summary>
-            /// This logon type is for GINA DLLs that log on users who will be interactively using the computer.
-            /// This logon type can generate a unique audit record that shows when the workstation was unlocked.
-            /// </summary>
-            LOGON32_LOGON_UNLOCK = 7,
-
-            /// <summary>
-            /// This logon type preserves the name and password in the authentication package, which allows the server to make
-            /// connections to other network servers while impersonating the client. A server can accept plaintext credentials
-            /// from a client, call LogonUser, verify that the user can access the system across the network, and still
-            /// communicate with other servers.
-            /// NOTE: Windows NT:  This value is not supported.
-            /// </summary>
-            LOGON32_LOGON_NETWORK_CLEARTEXT = 8,
-
-            /// <summary>
-            /// This logon type allows the caller to clone its current token and specify new credentials for outbound connections.
-            /// The new logon session has the same local identifier but uses different credentials for other network connections.
-            /// NOTE: This logon type is supported only by the LOGON32_PROVIDER_WINNT50 logon provider.
-            /// NOTE: Windows NT:  This value is not supported.
-            /// </summary>
-            LOGON32_LOGON_NEW_CREDENTIALS = 9,
-        }
-
-        public enum LogonProvider
-        {
-            /// <summary>
-            /// Use the standard logon provider for the system.
-            /// The default security provider is negotiate, unless you pass NULL for the domain name and the user name
-            /// is not in UPN format. In this case, the default provider is NTLM.
-            /// NOTE: Windows 2000/NT:   The default security provider is NTLM.
-            /// </summary>
-            LOGON32_PROVIDER_DEFAULT = 0,
-            LOGON32_PROVIDER_WINNT35 = 1,
-            LOGON32_PROVIDER_WINNT40 = 2,
-            LOGON32_PROVIDER_WINNT50 = 3
-        }
         #endregion
 
         #region DLL Imports
@@ -633,23 +564,11 @@ namespace FractalService
 
         [DllImport("user32.dll", SetLastError = true)]
         static extern bool CloseDesktop(IntPtr hDesktop);
-
-        [DllImport("advapi32.dll", SetLastError = true)]
-        static extern bool LogonUser(string pszUserName,
-                                     string pszDomain,
-                                     string pszPassword,
-                                     LogonType dwLogonType,
-                                     LogonProvider dwLogonProvider,
-                                     ref IntPtr phToken);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        static extern bool LockWorkStation();
         #endregion
 
         // Service global variables
         bool service_is_running = true; // to know whether to monitor the service
         PROCESS_INFORMATION pi; // variable holding the created process handles
-        IntPtr loggedInToken; // handle to the loggedIn user handle
 
         // Fractal Service initialization
         public FractalService()
@@ -682,19 +601,6 @@ namespace FractalService
             serviceStatus.dwCurrentState = ServiceState.SERVICE_RUNNING;
             SetServiceStatus(this.ServiceHandle, ref serviceStatus);
 
-            // VM information
-            string vmUsername = "vm1"; // TODO: find a way to find this dynamically
-            string vmDomain = ""; // no domain
-            string vmPassword = "password1234567."; // TODO: query webserver with VM username + IP to retrieve password
-
-            // Log in to the VM
-            if (!LogonUser(vmUsername, vmDomain, vmPassword, LogonType.LOGON32_LOGON_INTERACTIVE, LogonProvider.LOGON32_PROVIDER_DEFAULT, ref loggedInToken))
-            {
-                eventLog1.WriteEntry("LogonUser failed w/ error code: " + GetLastError().ToString());
-                return;
-            }
-            eventLog1.WriteEntry("LogonUser succeded, loggedInToken is: " + loggedInToken.ToString());
-
             // Launch the Fractal Protocol server as a console process to run on headless VM
             if (!LaunchConsoleProcess())
             {
@@ -724,10 +630,6 @@ namespace FractalService
             CloseHandle(pi.hThread);
             CloseHandle(pi.hProcess);
 
-            // Close the logged in handle and lock the VM
-            CloseHandle(loggedInToken);
-            LockWorkStation();
-
             // Update the service state to Stop Pending.
             ServiceStatus serviceStatus = new ServiceStatus
             {
@@ -750,10 +652,6 @@ namespace FractalService
             // For debugging
             eventLog1.WriteEntry("In LaunchConsoleProcess - Starting the Process.");
 
-
-
-
-            /*
             // Grab the winlogon process
             Process winLogon = null;
             foreach (Process p in Process.GetProcesses())
@@ -781,7 +679,6 @@ namespace FractalService
                 return false;
             }
             // eventLog1.WriteEntry("OpenProcessToken succeeded, opened token is: " + userToken.ToString());
-            */
 
             // Set token security attributes
             SECURITY_ATTRIBUTES tokenAttributes = new SECURITY_ATTRIBUTES();
@@ -791,7 +688,6 @@ namespace FractalService
             SECURITY_ATTRIBUTES threadAttributes = new SECURITY_ATTRIBUTES();
             threadAttributes.nLength = Marshal.SizeOf(threadAttributes);
 
-            /*
             // Duplicate the winlogon token to the new token
             if (!DuplicateTokenEx(userToken,                                           // token to duplicate
                                   GENERIC_ALL_ACCESS,                                  // access rights
@@ -837,7 +733,7 @@ namespace FractalService
                 return false;
             }
             // eventLog1.WriteEntry("AdjustTokenPrivilege succeeded.");
-            */
+
             // Path of the Fractal Protocol executable
             string AppName = "C:\\Program Files\\Fractal\\fractal-protocol\\server\\server.exe";
 
@@ -858,7 +754,7 @@ namespace FractalService
             uint dwCreationFlags = (uint) CreateProcessFlags.INHERIT_CALLER_PRIORITY | (uint) CreateProcessFlags.DETACHED_PROCESS;
 
             // Launch the process in the client's logon session using the new token
-            if (!CreateProcessAsUser(loggedInToken,            // client's access token
+            if (!CreateProcessAsUser(newToken,                // client's access token
                                      AppName,                 // file to execute
                                      null,                    // command line
                                      ref tokenAttributes,     // pointer to process SECURITY_ATTRIBUTES
@@ -871,8 +767,8 @@ namespace FractalService
                                      out pi))                 // receives information about new process
             {
                 eventLog1.WriteEntry("CreateProcessAsUser failed w/ error code: " + GetLastError().ToString());
-                //CloseHandle(newToken);
-                //CloseHandle(userToken);
+                CloseHandle(newToken);
+                CloseHandle(userToken);
                 return false;
             }
             // eventLog1.WriteEntry("CreateProcessAsUser succeeded.");
@@ -889,8 +785,8 @@ namespace FractalService
             }
             
             // Close handles task now that the process is launched, process information is in PROCESS_INFORMATION pi
-            //CloseHandle(newToken);
-            //CloseHandle(userToken);
+            CloseHandle(newToken);
+            CloseHandle(userToken);
 
             // Done launching the console process
             eventLog1.WriteEntry("Console Process launched - End of LaunchConsoleProcess.");
