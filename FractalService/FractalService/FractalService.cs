@@ -735,7 +735,7 @@ namespace FractalService
             // eventLog1.WriteEntry("AdjustTokenPrivilege succeeded.");
 
             // Path of the Fractal Protocol executable
-            string AppName = "C:\\Program Files\\Fractal\\fractal-protocol\\server\\server.exe";
+            string AppName = "C:\\Program Files\\Fractal\\FractalServer.exe";
 
             // Initialize the process structure
             pi = new PROCESS_INFORMATION();

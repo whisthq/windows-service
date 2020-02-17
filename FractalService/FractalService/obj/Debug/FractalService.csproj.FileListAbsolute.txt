@@ -25,3 +25,12 @@ C:\Users\vm1\Downloads\fractal-service\FractalService\FractalService\obj\Debug\F
 C:\Users\vm1\Downloads\fractal-service\FractalService\FractalService\obj\Debug\FractalService.csproj.GenerateResource.cache
 C:\Users\vm1\Downloads\fractal-service\FractalService\FractalService\obj\Debug\FractalService.exe
 C:\Users\vm1\Downloads\fractal-service\FractalService\FractalService\obj\Debug\FractalService.pdb
+C:\Users\Ming\fractal-service\FractalService\FractalService\bin\Debug\FractalService.exe.config
+C:\Users\Ming\fractal-service\FractalService\FractalService\bin\Debug\FractalService.exe
+C:\Users\Ming\fractal-service\FractalService\FractalService\bin\Debug\FractalService.pdb
+C:\Users\Ming\fractal-service\FractalService\FractalService\obj\Debug\FractalService.csprojAssemblyReference.cache
+C:\Users\Ming\fractal-service\FractalService\FractalService\obj\Debug\FractalService.FractalService.resources
+C:\Users\Ming\fractal-service\FractalService\FractalService\obj\Debug\FractalService.ProjectInstaller.resources
+C:\Users\Ming\fractal-service\FractalService\FractalService\obj\Debug\FractalService.csproj.GenerateResource.cache
+C:\Users\Ming\fractal-service\FractalService\FractalService\obj\Debug\FractalService.exe
+C:\Users\Ming\fractal-service\FractalService\FractalService\obj\Debug\FractalService.pdb
