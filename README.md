@@ -1,4 +1,4 @@
-# Fractal Windows System Service
+# Fractal Windows Service
 
 This repository contains the code for the Fractal Service which is installed on every Fractal cloud computer and runs at startup to log the computer into the console session (session 0) with Admin privileges, disable the Windows lock screen and start/monitor the Fractal protocol executable, starting/restarting it if necessary so that it is always running.
 
