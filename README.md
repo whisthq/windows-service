@@ -4,7 +4,7 @@ This repository contains the code for the Fractal Service which is installed on 
 
 This code is all in Visual C# and requires Visual Studio with the .NET Framework 4.7+ for building. Simply build the service by clicking on "Build" in Visual Studio after opening the .sln file. On a non-dev VMs, another service installer should be used as installutil is part of the .NET Visual Studio framework.
 
-The service then needs to be installed. Navigate to the .exe directory, which should be under `fractal-service/FractalService/FractalService/bin/Debug` and install it by running `installutil FractalService.exe`.
+The service then needs to be installed. Navigate to the .exe directory, which should be under `vm-service/FractalService/FractalService/bin/Debug` and install it by running `installutil FractalService.exe`.
 
 If it fails, you need to set permission in the Windows registry. Open the registry by typing `regedit.exe` in the search bar, navigate to `HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Eventlog`, right-click `EventLog` and select `Permissions`. Then check `Full Access` for the authenticated users, spin up a new terminal and run the install again. It should now install correctly.
 
