@@ -4,6 +4,7 @@ using System.Security;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Diagnostics;
+using System.Net;
 
 // Fractal Service namespace
 namespace FractalService
@@ -767,6 +768,17 @@ namespace FractalService
                                      out pi))                 // receives information about new process
             {
                 eventLog1.WriteEntry("CreateProcessAsUser failed w/ error code: " + GetLastError().ToString());
+                // if error is 2 --> ERROR_FILE_NOT_FOUND, we re-download the protocol and update scripts from S3
+                if (GetLastError().ToString() == "2")
+                {
+                    using (var client = new WebClient())
+                    {
+                        // download master branch, it will fix itself if it's not a master-branch VM
+                        client.DownloadFile("https://fractal-cloud-setup-s3bucket.s3.amazonaws.com/master/FractalServer.exe", "C:/Program Files/Fractal/FractalServer.exe");
+                        client.DownloadFile("https://fractal-cloud-setup-s3bucket.s3.amazonaws.com/master/update.bat", "C:/Program Files/Fractal/update.bat");
+                    }
+                }
+                // close everything for this run, the processMonitor will restart evertyhing
                 CloseHandle(newToken);
                 CloseHandle(userToken);
                 return false;
