@@ -16,10 +16,6 @@ You can then go to the `Services` application on Windows, locate the process and
 
 ## Publishing
 
+You can publish the new service to production, which is hosted on AWS S3, by running `./update.sh`. This script will upload the new service executable to AWS S3 and notify the team in Slack.
 
-TODO -- add script
-
-
-Once you are ready to publish to production, you simply need to take the 
-
-The `/bin/Debug` folder contains the pre-compiled executable for a VM. You can simply download it, install it with `installutil FractalService.exe` and it should be good to start automatically at boot.
+If you get permission denied, or if this is your first time doing this for Fractal, you need to download the AWS CLI for your local platform. Your first need to install the CLI via your local package manager, i.e. `brew install awscli`, and then configure it via `aws configure`. This will prompt you for an AWS Acces Key ID and Secret Key ID. You can find those [here](https://console.aws.amazon.com/iam/home?region=us-east-1#/users/UpdateServer?section=security_credentials). You will need to create a new AWS Key and Secret Key for yourself. You should set `us-east-1` for the default region, and `None` for the format. The service will then auto-update itself at the next restart, by pulling from AWS S3.
