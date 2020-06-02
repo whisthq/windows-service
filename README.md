@@ -8,7 +8,7 @@ This code is all in Visual C# and requires Visual Studio with the .NET Framework
 
 ## Development
 
-The service then needs to be installed before it can be used, either as production or for development. Navigate to the `.exe` directory, which should be under `vm-service/FractalService/FractalService/bin/Debug` and install it by running `installutil FractalService.exe`.
+The service then needs to be installed before it can be used, either as production or for development. Navigate to the `.exe` directory, which should be under `vm-service/FractalService/bin/Debug` and install it by running `installutil FractalService.exe`.
 
 If it fails, you need to set proper permissions in the Windows registry. Open the registry by typing `regedit.exe` in the search bar, navigate to `HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Eventlog`, right-click `EventLog` and select `Permissions`. Then, check `Full Access` for the authenticated users, spin up a new terminal and run the install again. It should now install correctly.
 
