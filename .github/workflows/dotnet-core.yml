@@ -1,4 +1,4 @@
-name: .NET Core CI
+name: .NET CI
 
 on:
   push:
@@ -16,23 +16,12 @@ jobs:
 
     - name: Setup .NET Framework env
       uses: vrnobody/Setup-DotNetFrameworkEnv@v1
-      # uses: actions/setup-dotnet@v1
-      # with:
-      #   dotnet-version: 4.7.2
-      
-    - name: Setup .net framework env
-      uses: vrnobody/Setup-DotNetFrameworkEnv@v1
+
+    - name: Install dependencies
+      run: dotnet restore
 
     - name: Restore Nuget Packages
       run: nuget restore FractalService.sln
 
-    - name: Build Solution
+    - name: Build FractalService Solution
       run: msbuild FractalService.sln -p:Configuration=Release
-
-
-    - name: Install dependencies
-      run: dotnet restore
-    - name: Build
-      run: dotnet build --configuration Release --no-restore
-    - name: Test
-      run: dotnet test --no-restore --verbosity normal
