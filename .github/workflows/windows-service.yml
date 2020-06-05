@@ -28,6 +28,6 @@ jobs:
       run: msbuild FractalService.sln -p:Configuration=Release
 
     - name: Install & Start Windows Service
-      run: cmd.exe /c 'sc.exe Create "Fractal" binPath= "D:\a\vm-service\vm-service\FractalService\bin\Release\FractalService.exe\"" start= "auto"' && 
+      run: cmd.exe /c 'sc.exe Create "Fractal" binPath="D:\a\vm-service\vm-service\FractalService\bin\Release\FractalService.exe" start= "auto"' && 
            cmd.exe /c 'sc.exe description "Fractal" "Fractal Service"' &&
            sc.exe Start 'Fractal'
