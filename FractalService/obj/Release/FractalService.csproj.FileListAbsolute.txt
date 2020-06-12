@@ -1,0 +1,9 @@
+C:\Users\phil\Downloads\vm-service\FractalService\bin\Release\FractalService.exe.config
+C:\Users\phil\Downloads\vm-service\FractalService\bin\Release\FractalService.exe
+C:\Users\phil\Downloads\vm-service\FractalService\bin\Release\FractalService.pdb
+C:\Users\phil\Downloads\vm-service\FractalService\obj\Release\FractalService.FractalService.resources
+C:\Users\phil\Downloads\vm-service\FractalService\obj\Release\FractalService.ProjectInstaller.resources
+C:\Users\phil\Downloads\vm-service\FractalService\obj\Release\FractalService.csproj.GenerateResource.cache
+C:\Users\phil\Downloads\vm-service\FractalService\obj\Release\FractalService.csproj.CoreCompileInputs.cache
+C:\Users\phil\Downloads\vm-service\FractalService\obj\Release\FractalService.exe
+C:\Users\phil\Downloads\vm-service\FractalService\obj\Release\FractalService.pdb

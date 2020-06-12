@@ -445,6 +445,18 @@ namespace FractalService
             SecurityImpersonation,
             SecurityDelegation
         }
+
+        public enum PriorityClass : uint
+        {
+            ABOVE_NORMAL_PRIORITY_CLASS = 0x8000,
+            BELOW_NORMAL_PRIORITY_CLASS = 0x4000,
+            HIGH_PRIORITY_CLASS = 0x80,
+            IDLE_PRIORITY_CLASS = 0x40,
+            NORMAL_PRIORITY_CLASS = 0x20,
+            PROCESS_MODE_BACKGROUND_BEGIN = 0x100000, // 'Windows Vista/2008 and higher
+            PROCESS_MODE_BACKGROUND_END = 0x200000,   // 'Windows Vista/2008 and higher
+            REALTIME_PRIORITY_CLASS = 0x100
+        }
         #endregion
 
         #region DLL Imports
@@ -481,6 +493,9 @@ namespace FractalService
 
         [DllImport("kernel32.dll", SetLastError = true), SuppressUnmanagedCodeSecurity]
         static extern bool CloseHandle(IntPtr handle);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern bool SetPriorityClass(IntPtr handle, PriorityClass priorityClass);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern uint WTSGetActiveConsoleSessionId();
@@ -569,6 +584,8 @@ namespace FractalService
 
         // Service global variables
         bool service_is_running = true; // to know whether to monitor the service
+        bool redownloaded_server = false; // to know whether a FractalServer.exe was redownloaded, and we need to retry
+        bool launchConsoleProcessSucceeded = false; // to know whether LaunchConsoleProcess succeeded across calls
         PROCESS_INFORMATION pi; // variable holding the created process handles
 
         // Fractal Service initialization
@@ -605,8 +622,20 @@ namespace FractalService
             // Launch the Fractal Protocol server as a console process to run on headless VM
             if (!LaunchConsoleProcess())
             {
-                eventLog1.WriteEntry("Failed to launch Fractal Protocol as console process w/ error code: " + GetLastError().ToString());
-                return;
+                // If we redownload FractalServer.exe, try to launch Fractal Protocol again
+                while (redownloaded_server)
+                {
+                    eventLog1.WriteEntry("FractalServer.exe redownloaded, re-attempting to launch Fractal Protocol");
+                    redownloaded_server = false;
+                    LaunchConsoleProcess();
+                }
+
+                // Notify if it failed with FractalServer.exe present
+                if (!launchConsoleProcessSucceeded)
+                {
+                    eventLog1.WriteEntry("Failed to launch Fractal Protocol as console process w/ error code: " + GetLastError().ToString());
+                    return;
+                }
             }
             // eventLog1.WriteEntry("Successfully launched Fractal Protocol as console process.");
 
@@ -767,16 +796,23 @@ namespace FractalService
                                      ref si,                  // pointer to STARTUPINFO structure
                                      out pi))                 // receives information about new process
             {
-                eventLog1.WriteEntry("CreateProcessAsUser failed w/ error code: " + GetLastError().ToString());
                 // if error is 2 --> ERROR_FILE_NOT_FOUND, we re-download the protocol and update scripts from S3
-                if (GetLastError().ToString() == "2")
+                if (GetLastError() == 2)
                 {
+                    eventLog1.WriteEntry("CreateProcessAsUser failed w/ error code: 2");
+                    eventLog1.WriteEntry("FractalServer.exe not found; Downloading a new one from AWS S3.");
                     using (var client = new WebClient())
                     {
                         // download master branch, it will fix itself if it's not a master-branch VM
                         client.DownloadFile("https://fractal-cloud-setup-s3bucket.s3.amazonaws.com/master/FractalServer.exe", "C:/Program Files/Fractal/FractalServer.exe");
                         client.DownloadFile("https://fractal-cloud-setup-s3bucket.s3.amazonaws.com/master/update.bat", "C:/Program Files/Fractal/update.bat");
                     }
+                    // set boolean to true, so we re-try to launch the Fractal Protocol
+                    redownloaded_server = true;
+                }
+                else
+                {
+                    eventLog1.WriteEntry("CreateProcessAsUser failed w/ error code: " + GetLastError().ToString());
                 }
                 // close everything for this run, the processMonitor will restart evertyhing
                 CloseHandle(newToken);
@@ -795,12 +831,26 @@ namespace FractalService
             {
                 EventLog.WriteEntry("Process not found.");
             }
-            
+
+            // Set the process to HIGH_PRIORITY_CLASS to prioritize Fractal Protocol
+            // above any other non-OS process on the computer (to avoid crowding out
+            // when the compuer reaches near 100% CPU utilization)
+            // See: https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setpriorityclass
+            if (!SetPriorityClass(pi.hProcess, PriorityClass.HIGH_PRIORITY_CLASS))
+            {
+                eventLog1.WriteEntry("SetPriorityClass failed w/ error code: " + GetLastError().ToString());
+                CloseHandle(newToken);
+                CloseHandle(userToken);
+                return false;
+            }
+            eventLog1.WriteEntry("SetPriorityClass succeeded.");
+
             // Close handles task now that the process is launched, process information is in PROCESS_INFORMATION pi
             CloseHandle(newToken);
             CloseHandle(userToken);
 
             // Done launching the console process
+            launchConsoleProcessSucceeded = true;
             eventLog1.WriteEntry("Console Process launched - End of LaunchConsoleProcess.");
             return true;
         }
