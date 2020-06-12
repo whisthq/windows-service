@@ -1,6 +1,6 @@
 # Fractal Windows Service
 
-![Windows Service CI](https://github.com/fractalcomputers/vm-service/workflows/.NET%20CI/badge.svg)
+![Windows Service CI](https://github.com/fractalcomputers/vm-service/workflows/Windows%20Service%20CI/badge.svg)
 
 This repository contains the code for the Fractal Windows service, which is installed on every Fractal Windows cloud computer/client server and runs at startup to log the computer into the console session (session 0) with Admin privileges, disable the Windows lock screen and start/monitor the Fractal protocol, starting/restarting it as necessary to keep it running 24/7. The service also sets high priority to the Fractal Protocol process, which ensures it does not get crowded out when a computer's resources are maximally utilized.
 
