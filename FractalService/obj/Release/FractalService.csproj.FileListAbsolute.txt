@@ -7,3 +7,4 @@ C:\Users\phil\Downloads\vm-service\FractalService\obj\Release\FractalService.csp
 C:\Users\phil\Downloads\vm-service\FractalService\obj\Release\FractalService.csproj.CoreCompileInputs.cache
 C:\Users\phil\Downloads\vm-service\FractalService\obj\Release\FractalService.exe
 C:\Users\phil\Downloads\vm-service\FractalService\obj\Release\FractalService.pdb
+C:\Users\phil\Downloads\vm-service\FractalService\obj\Release\FractalService.csprojAssemblyReference.cache

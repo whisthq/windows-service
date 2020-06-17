@@ -804,8 +804,8 @@ namespace FractalService
                     using (var client = new WebClient())
                     {
                         // download master branch, it will fix itself if it's not a master-branch VM
-                        client.DownloadFile("https://fractal-cloud-setup-s3bucket.s3.amazonaws.com/master/FractalServer.exe", "C:/Program Files/Fractal/FractalServer.exe");
-                        client.DownloadFile("https://fractal-cloud-setup-s3bucket.s3.amazonaws.com/master/update.bat", "C:/Program Files/Fractal/update.bat");
+                        client.DownloadFile("https://fractal-cloud-setup-s3bucket.s3.amazonaws.com/master/Windows/FractalServer.exe", "C:/Program Files/Fractal/FractalServer.exe");
+                        client.DownloadFile("https://fractal-cloud-setup-s3bucket.s3.amazonaws.com/master/Windows/update.bat", "C:/Program Files/Fractal/update.bat");
                     }
                     // set boolean to true, so we re-try to launch the Fractal Protocol
                     redownloaded_server = true;
