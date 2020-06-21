@@ -12,6 +12,8 @@ Once the executable is built, it needs to be installed via `installutil` (see be
 
 ## Development
 
+All the code written for the service is in the file `FractalService.cs`. This is where all the functions related directly to the Fractal service are written, as compared to other files which are helper files for writting services on Windows. There is a function to start the service, one to stop it, one to monitor it and restart it if it crashes/exists, and one to launch the Fractal Protocol as a console process, which is where most of work lives. If you need to modify the service, this is likely the function you will need to modify.
+
 The service needs to be installed before it can be used, both for production and development. Navigate to the `.exe` directory, which should be under `vm-service/FractalService/bin/Debug`, if you've just built it, and install it by running `installutil FractalService.exe`. You should develop by building to `Debug` mode, and build to `Release` mode when you are ready to publish. You **need** to run this installation command from an Administrator command prompt, typically x86_64 Cross Tools Command Prompt for VS 2019, otherwise it will fail with error `The source was not found, but some or all event logs could not be searched. Inaccessible logs: Security, State`.  
 
 If it fails, you need to set proper permissions in the Windows registry. Open the registry by typing `regedit.exe` in the search bar, navigate to `HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Eventlog`, right-click `EventLog` and select `Permissions`. Then, check `Full Access` for the authenticated users, spin up a new terminal and run the install command again. It should now install properly.
