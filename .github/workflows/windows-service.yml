@@ -1,4 +1,5 @@
 # This workflow installs the .NET framework, builds the Windows Service, installs it and finally starts it
+# It tests service installation and starting, which can catch most service errors
 
 name: Windows Service CI
 
