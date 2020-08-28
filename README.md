@@ -8,7 +8,7 @@ This repository contains the code for the Fractal Windows service, which is inst
 
 This project is implemented in Visual C# and requires Visual Studio with the .NET Framework 4.7+ for building. To build the code, you simply need to open the `.sln` file in Visual Studio, and then click "Build" in the top bar (Build Tab, and then Build should be the first option).
 
-Once the executable is built, it needs to be installed via `installutil` (see below) to be run as a Windows Service. On a non-dev VM/container, another service installer needs to be used as installutil is part of the .NET Visual Studio framework, which we do not install on production VMs/containers. You can find the service installer used in production in the `fractalcomputers/setup-scripts` repository, it is called `sc.exe`. For developing the service, you should stick with `installutil` as it makes it easiest to install and uninstall frequently.
+Once the executable is built, it needs to be installed via `installutil` (see below) to be run as a Windows Service. On a non-dev VM/container, another service installer needs to be used as installutil is part of the .NET Visual Studio framework, which we do not install on production VMs/containers. You can find the service installer used in production in the `fractalcomputers/setup-scripts` repository, it is called `sc.exe`. For developing the service, you should stick with `installutil` as it makes it easier to install and uninstall frequently.
 
 ## Development
 
