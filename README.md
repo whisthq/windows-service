@@ -35,6 +35,6 @@ Before you publish, make sure to build via the `Release` tag, and not `Debug`, i
 
 You can publish the new service to production, which is hosted on AWS S3, by running `./update.sh`. Note that this script assumes you are publishing the `Release` version of the service, and will fail otherwise. This script will upload the new service executable to AWS S3 and notify the team in Slack. The Windows service will then be automatically updated the next time a server update is pushed for the Fractal Protocol servers.
 
-If you get permission denied, or if this is your first time doing this for Fractal, you need to download the AWS CLI for your local platform. Your first need to install the CLI via your local package manager, i.e. `brew install awscli`, and then configure it via `aws configure`. This will prompt you for an AWS Acces Key ID and Secret Key ID, for which you should provide your own AWS Key and Secret Key, alongside the region `us-east-1` and format `None`.
+If you get permission denied, or if this is your first time doing this for Fractal, you need to download the AWS CLI for your local platform. Your first need to install the CLI via your local package manager, i.e. `brew install awscli`, and then configure it via `aws configure`. This will prompt you for an AWS Acces Key ID and Secret Key ID, for which you should provide your own AWS IAM Key and Secret Key, alongside the region `us-east-1` and format `None`.
 
 The service will then auto-update itself next time we push a server update, by pulling from AWS S3. 
