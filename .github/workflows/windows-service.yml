@@ -6,6 +6,8 @@ name: Windows Service CI
 on:
   pull_request:
     branches: [ master ]
+    paths-ignore:
+    - '**/README.md'
 
 jobs:
   build:
