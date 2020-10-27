@@ -43,6 +43,9 @@ jobs:
       - name: Restore Nuget Packages
         run: nuget restore FractalService.sln
 
+      - name: Install Sentry
+        run: dotnet add package Sentry
+
       - name: Build FractalService Solution
         run: msbuild FractalService.sln -p:Configuration=Release
 
