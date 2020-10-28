@@ -4,7 +4,7 @@ name: Build and Publish Windows Service
 
 on:
   push:
-    branches: [ master, sentry ]
+    branches: [ master ]
     paths-ignore:
     - '**/README.md'
   workflow_dispatch:
