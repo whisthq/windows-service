@@ -20,10 +20,12 @@ jobs:
     steps:
       - name: Checkout Git repository
         uses: actions/checkout@v2
+        with:
+          persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
 
       - name: Set Git repository URL to enable sentry-cli automatic commit tagging
         run: |
-          git remote set-url origin https://github.com/fractalcomputers/windows-service
+          git remote add origin https://github.com/fractalcomputers/windows-service
 
       - name: Create new Sentry release
         run: |
