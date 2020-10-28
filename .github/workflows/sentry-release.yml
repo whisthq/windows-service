@@ -5,7 +5,7 @@ name: Sentry Release
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, sentry ]
     paths-ignore:
     - '**/README.md'
   workflow_dispatch:
