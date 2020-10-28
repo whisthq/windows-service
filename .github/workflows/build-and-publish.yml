@@ -50,8 +50,15 @@ jobs:
       - name: Upload binary to S3
         run: aws s3 cp ${{ env.binary-location }}/${{ env.binary-name }} ${{ env.s3-bucket-uri }}/${{ env.binary-name }}
 
+  notify-slack:
+    name: Notify Slack
+    needs: [s3-publish]
+    if: success()
+    runs-on: ubuntu-20.04
 
-
+    steps:
       - name: Notify Slack
         run: |
-          curl -X POST --data-urlencode "payload={\"channel\": \"#alerts\", \"username\": \"Fractal Bot\", \"text\": \"Windows Service pushed to production via S3 upload.\", \"icon_emoji\": \":fractal:\"}" https://hooks.slack.com/services/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
+          curl -X POST \ 
+          --data-urlencode "payload={\"channel\": \"#alerts\", \"username\": \"Fractal Bot\", \"text\": \"Windows Service pushed to production via S3 upload.\", \"icon_emoji\": \":fractal:\"}" \
+          https://hooks.slack.com/services/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
