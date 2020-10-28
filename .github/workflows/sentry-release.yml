@@ -25,7 +25,7 @@ jobs:
 
       - name: Set Git repository URL to enable sentry-cli automatic commit tagging
         run: |
-          git remote add origin https://github.com/fractalcomputers/windows-service
+          git remote set-url origin https://github.com/fractalcomputers/windows-service
 
       - name: Create new Sentry release
         run: |
