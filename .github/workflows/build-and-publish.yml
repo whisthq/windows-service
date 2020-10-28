@@ -1,6 +1,5 @@
-# This workflow installs the .NET framework, builds the Windows Service, installs it and finally starts it
+# This workflow installs the .NET framework, builds the Windows Service, and pushes it to AWS S3
 # It tests service installation and starting, which can catch most service errors
-
 name: Build and Publish Windows Service
 
 on:
@@ -52,13 +51,13 @@ jobs:
 
   notify-slack:
     name: Notify Slack
-    needs: [s3-publish]
+    needs: [ s3-publish ]
     if: success()
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Notify Slack
         run: |
-          curl -X POST \ 
+          curl -X POST \
           --data-urlencode "payload={\"channel\": \"#alerts\", \"username\": \"Fractal Bot\", \"text\": \"Windows Service pushed to production via S3 upload.\", \"icon_emoji\": \":fractal:\"}" \
           https://hooks.slack.com/services/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
