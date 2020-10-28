@@ -1,23 +1,16 @@
 # This workflow installs the .NET framework, builds the Windows Service, installs it and finally starts it
 # It tests service installation and starting, which can catch most service errors
-
 name: Windows Service CI
 
 on:
   pull_request:
-    branches: [ master ]
+    branches: [ master, sentry ]
     paths-ignore:
     - '**/README.md'
 
-env:
-  binary-location: FractalService/bin/Release
-  binary-name: FractalService.exe
-  s3-bucket-region: us-east-1 # eventually, we should replicate s3 per region
-  s3-bucket-uri: s3://fractal-windows-service
-
 jobs:
   s3-publish:
-      name: Build and publish to AWS S3
+      name: Build and run Windows Service
       runs-on: windows-latest
 
       steps:
@@ -26,13 +19,6 @@ jobs:
         with:
           persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
           fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
-
-      - name: Configure AWS CLI
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_S3_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_S3_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.s3-bucket-region }}
 
       - name: Setup .NET Framework env
         uses: vrnobody/Setup-DotNetFrameworkEnv@v1
@@ -43,9 +29,6 @@ jobs:
       - name: Restore Nuget Packages
         run: nuget restore FractalService.sln
 
-      - name: Install Sentry
-        run: dotnet add package Sentry
-
       - name: Build FractalService Solution
         run: msbuild FractalService.sln -p:Configuration=Release
 
@@ -55,9 +38,3 @@ jobs:
           cmd.exe /c 'sc.exe description "Fractal" "Fractal Service"' &&
           sc.exe Start 'Fractal'
            
-      - name: Upload binary to S3
-        run: aws s3 cp ${{ env.binary-location }}/${{ env.binary-name }} ${{ env.s3-bucket-uri }}/${{ env.binary-name }}
-
-      - name: Notify Slack
-        run: |
-          curl -X POST --data-urlencode "payload={\"channel\": \"#alerts\", \"username\": \"Fractal Bot\", \"text\": \"Windows Service pushed to production via S3 upload.\", \"icon_emoji\": \":fractal:\"}" https://hooks.slack.com/services/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      
