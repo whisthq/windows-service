@@ -3,8 +3,8 @@
 name: Build Windows Service
 
 on:
-  push:
-    branches: [ master, sentry ]
+  pull_request:
+    branches: [ master, dev ]
     paths-ignore:
     - '**/README.md'
 
