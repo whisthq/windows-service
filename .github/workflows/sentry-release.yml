@@ -4,7 +4,7 @@ name: Sentry Release
 
 on:
   pull_request:
-    branches: [ master ]
+    branches: [ master, sentry ]
     paths-ignore:
     - '**/README.md'
 
@@ -20,8 +20,6 @@ jobs:
     steps:
       - name: Checkout Git repository
         uses: actions/checkout@v2
-        with:
-          persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
 
       - name: Set Git repository URL to enable sentry-cli automatic commit tagging
         run: |
