@@ -1,6 +1,6 @@
 # Fractal Windows Service
 
-![Windows Service CI](https://github.com/fractalcomputers/windows-service/workflows/Windows%20Service%20CI/badge.svg)
+![Build Windows Service](https://github.com/fractalcomputers/windows-service/workflows/Build%20Windows%20Service/badge.svg) ![Build and Publish Windows Service](https://github.com/fractalcomputers/windows-service/workflows/Build%20and%20Publish%20Windows%20Service/badge.svg) ![Sentry Release](https://github.com/fractalcomputers/windows-service/workflows/Sentry%20Release/badge.svg)
 
 This repository contains the code for the Fractal Windows service, which is installed on every Fractal Windows VM/container and runs at startup to log the computer into the console session, session 0, with Admin privileges and start/monitor the Fractal protocol, starting/restarting it as necessary to keep it running 24/7. The service also sets high priority to the Fractal Protocol process, which ensures it does not get crowded out when a computer's resources are maximally utilized.
 
@@ -23,13 +23,14 @@ If it fails, you need to set proper permissions in the Windows registry. Open th
 You can then go to the `Services` application on Windows, locate the `FractalService` process and start it by pressing Start. It should run as `SYSTEM` under the Details tab. You can stop it from there as well. Before making any modifications to the code, the service needs to be stopped manually from the `Services` application and then uninstalled by running `installutil /u FractalService.exe`. 
 
 To view the logs of the service, you can open the `Events Viewer` application, click on `Applications and Services Logs`, and click on `FractalLog`, which is the best way to debug it as you can't see any regular print statement with a service. The typical development workflow is:
+
 - Uninstall the service
 - Make your modifications and add plentry of event logs
 - Rebuild the service
 - Reinstall the service and restart it
 - Check the Event Viewer application to see the logs and the behavior of the program
 
-Rinse and repeat until the service works the way you intend it to!
+Rinse and repeat until the service works the way you intend it to! Note that your work should be PR-ed to `dev` and pass the GitHub Actions tests before being merged.
 
 ## Publishing
 
