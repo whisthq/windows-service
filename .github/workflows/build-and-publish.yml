@@ -1,0 +1,63 @@
+# This workflow installs the .NET framework, builds the Windows Service, and pushes it to AWS S3
+# It tests service installation and starting, which can catch most service errors
+name: Build and Publish Windows Service
+
+on:
+  push:
+    branches: [ master ]
+    paths-ignore:
+    - '**/README.md'
+  workflow_dispatch:
+
+env:
+  binary-location: FractalService/bin/Release
+  binary-name: FractalService.exe
+  s3-bucket-region: us-east-1 # eventually, we should replicate S3 per region
+  s3-bucket-uri: s3://fractal-windows-service
+
+jobs:
+  s3-publish:
+      name: Build and publish to AWS S3
+      runs-on: windows-latest
+
+      steps:
+      - name: Checkout git repository
+        uses: actions/checkout@v2
+        with:
+          persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
+          fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
+
+      - name: Configure AWS CLI
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_S3_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_S3_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.s3-bucket-region }}
+
+      - name: Setup .NET Framework env
+        uses: vrnobody/Setup-DotNetFrameworkEnv@v1
+
+      - name: Install dependencies
+        run: dotnet restore
+
+      - name: Restore Nuget Packages
+        run: nuget restore FractalService.sln
+
+      - name: Build FractalService Solution
+        run: msbuild FractalService.sln -p:Configuration=Release
+           
+      - name: Upload binary to S3
+        run: aws s3 cp ${{ env.binary-location }}/${{ env.binary-name }} ${{ env.s3-bucket-uri }}/${{ env.binary-name }}
+
+  notify-slack:
+    name: Notify Slack
+    needs: [ s3-publish ]
+    if: success()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Notify Slack
+        run: |
+          curl -X POST \
+          --data-urlencode "payload={\"channel\": \"#alerts\", \"username\": \"Fractal Bot\", \"text\": \"Windows Service pushed to production via S3 upload.\", \"icon_emoji\": \":fractal:\"}" \
+          https://hooks.slack.com/services/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
