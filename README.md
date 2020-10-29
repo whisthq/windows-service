@@ -32,6 +32,6 @@ To view the logs of the service, you can open the `Events Viewer` application, c
 
 Rinse and repeat until the service works the way you intend it to! Note that your work should be PR-ed to `dev` and pass the GitHub Actions tests before being merged.
 
-## Publishing
+## Publishing & Continuous Integration
 
 Every push to `master` will automatically publish the new service, built with the `Release` tag, to AWS S3 and notify the team in Slack. The Windows service will then be automatically updated the next time a server update is pushed for the Fractal Protocol servers.
