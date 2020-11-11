@@ -1,16 +1,16 @@
 # Fractal Windows Service
 
-![Build Windows Service](https://github.com/fractalcomputers/windows-service/workflows/Build%20Windows%20Service/badge.svg) ![Build and Publish Windows Service](https://github.com/fractalcomputers/windows-service/workflows/Build%20and%20Publish%20Windows%20Service/badge.svg) ![Sentry Release](https://github.com/fractalcomputers/windows-service/workflows/Sentry%20Release/badge.svg)
+![Build Windows Service](https://github.com/fractal/windows-service/workflows/Build%20Windows%20Service/badge.svg) ![Build and Publish Windows Service](https://github.com/fractal/windows-service/workflows/Build%20and%20Publish%20Windows%20Service/badge.svg) ![Sentry Release](https://github.com/fractal/windows-service/workflows/Sentry%20Release/badge.svg)
 
-This repository contains the code for the Fractal Windows service, which is installed on every Fractal Windows VM/container and runs at startup to log the computer into the console session, session 0, with Admin privileges and start/monitor the Fractal protocol, starting/restarting it as necessary to keep it running 24/7. The service also sets high priority to the Fractal Protocol process, which ensures it does not get crowded out when a computer's resources are maximally utilized.
+This repository contains the code for the Fractal Windows service, which is installed on every Fractal Windows container and runs at startup to log the computer into the console session, session 0, with Admin privileges, and start/monitor the Fractal protocol, starting/restarting it as necessary to keep it running 24/7. The service also sets high priority to the Fractal Protocol process, which ensures it does not get crowded out when a computer's resources are maximally utilized.
 
-For further documentation, check this repository's [Wiki](https://github.com/fractalcomputers/windows-service/wiki). 
+For further documentation, check this repository's [Wiki](https://github.com/fractal/windows-service/wiki). 
 
 ## Building
 
 This project is implemented in Visual C# and requires Visual Studio with the .NET Framework 4.7+ for building. To build the code, you simply need to open the `.sln` file in Visual Studio, and then click "Build" in the top bar (Build Tab, and then Build should be the first option).
 
-Once the executable is built, it needs to be installed via `installutil` (see below) to be run as a Windows Service. On a non-dev VM/container, another service installer needs to be used as installutil is part of the .NET Visual Studio framework, which we do not install on production VMs/containers. You can find the service installer used in production in the `fractalcomputers/setup-scripts` repository, it is called `sc.exe`. For developing the service, you should stick with `installutil` as it makes it easier to install and uninstall frequently.
+Once the executable is built, it needs to be installed via `installutil` (see below) to be run as a Windows Service. On a non-dev VM/container, another service installer needs to be used as installutil is part of the .NET Visual Studio framework, which we do not install on production containers. You can find the service installer used in production in the `fractal/setup-scripts` repository, it is called `sc.exe`. For developing the service, you should stick with `installutil` as it makes it easier to install and uninstall frequently.
 
 ## Development
 

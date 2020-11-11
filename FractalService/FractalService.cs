@@ -584,7 +584,6 @@ namespace FractalService
 
         // Service global variables
         bool service_is_running = true; // to know whether to monitor the service
-        bool redownloaded_server = false; // to know whether a FractalServer.exe was redownloaded, and we need to retry
         bool launchConsoleProcessSucceeded = false; // to know whether LaunchConsoleProcess succeeded across calls
         PROCESS_INFORMATION pi; // variable holding the created process handles
 
@@ -622,14 +621,6 @@ namespace FractalService
             // Launch the Fractal Protocol server as a console process to run on headless VM
             if (!LaunchConsoleProcess())
             {
-                // If we redownload FractalServer.exe, try to launch Fractal Protocol again
-                while (redownloaded_server)
-                {
-                    eventLog1.WriteEntry("FractalServer.exe redownloaded, re-attempting to launch Fractal Protocol");
-                    redownloaded_server = false;
-                    LaunchConsoleProcess();
-                }
-
                 // Notify if it failed with FractalServer.exe present
                 if (!launchConsoleProcessSucceeded)
                 {
@@ -796,24 +787,9 @@ namespace FractalService
                                      ref si,                  // pointer to STARTUPINFO structure
                                      out pi))                 // receives information about new process
             {
-                // if error is 2 --> ERROR_FILE_NOT_FOUND, we re-download the protocol and update scripts from S3
-                if (GetLastError() == 2)
-                {
-                    eventLog1.WriteEntry("CreateProcessAsUser failed w/ error code: 2");
-                    eventLog1.WriteEntry("FractalServer.exe not found; Downloading a new one from AWS S3.");
-                    using (var client = new WebClient())
-                    {
-                        // download master branch, it will fix itself if it's not a master-branch VM
-                        client.DownloadFile("https://fractal-cloud-setup-s3bucket.s3.amazonaws.com/master/Windows/FractalServer.exe", "C:/Program Files/Fractal/FractalServer.exe");
-                        client.DownloadFile("https://fractal-cloud-setup-s3bucket.s3.amazonaws.com/master/Windows/update.bat", "C:/Program Files/Fractal/update.bat");
-                    }
-                    // set boolean to true, so we re-try to launch the Fractal Protocol
-                    redownloaded_server = true;
-                }
-                else
-                {
-                    eventLog1.WriteEntry("CreateProcessAsUser failed w/ error code: " + GetLastError().ToString());
-                }
+                // failed to CreateProcessAsUser
+                eventLog1.WriteEntry("CreateProcessAsUser failed w/ error code: " + GetLastError().ToString());
+                
                 // close everything for this run, the processMonitor will restart evertyhing
                 CloseHandle(newToken);
                 CloseHandle(userToken);
