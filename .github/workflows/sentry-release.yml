@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-      SENTRY_ORG: fractalcomputers
+      SENTRY_ORG: tryfractal
       SENTRY_PROJECT: windows-service
       SENTRY_DEPLOY_ENVIRONMENT: production
 
