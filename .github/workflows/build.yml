@@ -20,8 +20,8 @@ jobs:
           persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
           fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
 
-      - name: Setup .NET Framework env
-        uses: vrnobody/Setup-DotNetFrameworkEnv@v1
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.0.2
 
       - name: Install dependencies
         run: dotnet restore
