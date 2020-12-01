@@ -20,11 +20,6 @@ jobs:
           persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
           fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
 
-      - name: Setup .NET Framework env
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: '4.7.x' # SDK Version to use; x will use the latest version of the 4.7 channel
-
       - name: Install dependencies
         run: dotnet restore
 
