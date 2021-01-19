@@ -1,6 +1,6 @@
 # Fractal Windows Service
 
-![Build Windows Service](https://github.com/fractal/windows-service/workflows/Build%20Windows%20Service/badge.svg) ![Build and Publish Windows Service](https://github.com/fractal/windows-service/workflows/Build%20and%20Publish%20Windows%20Service/badge.svg) ![Sentry Release](https://github.com/fractal/windows-service/workflows/Sentry%20Release/badge.svg)
+![Build Windows Service](https://github.com/fractal/windows-service/workflows/Build%20Windows%20Service/badge.svg) ![Build and Publish Windows Service](https://github.com/fractal/windows-service/workflows/Build%20and%20Publish%20Windows%20Service/badge.svg) ![Push Sentry Release](https://github.com/fractal/windows-service/workflows/Push%20Sentry%20Release/badge.svg)
 
 This repository contains the code for the Fractal Windows service, which is installed on every Fractal Windows container and runs at startup to log the computer into the console session, session 0, with Admin privileges, and start/monitor the Fractal protocol, starting/restarting it as necessary to keep it running 24/7. The service also sets high priority to the Fractal Protocol process, which ensures it does not get crowded out when a computer's resources are maximally utilized.
 
