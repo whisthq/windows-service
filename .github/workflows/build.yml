@@ -6,37 +6,36 @@
 name: "Build Windows Service"
 
 on:
-  push:
-    branches:
-      - master
-    paths-ignore:
-    - '**/README.md'
-  workflow_dispatch:
+    push:
+        branches:
+            - master
+        paths-ignore:
+            - "**/README.md"
+    workflow_dispatch:
 
 jobs:
-  build-and-installmain:
-      name: Build and Run Windows Service
-      runs-on: windows-2019
+    build-and-installmain:
+        name: Build and Run Windows Service
+        runs-on: windows-2019
 
-      steps:
-        - name: Checkout Git Repository
-          uses: actions/checkout@v2
+        steps:
+            - name: Checkout Git Repository
+              uses: actions/checkout@v2
 
-        - name: Add msbuild to PATH
-          uses: microsoft/setup-msbuild@v1.0.2
+            - name: Add msbuild to PATH
+              uses: microsoft/setup-msbuild@v1.0.2
 
-        - name: Install dependencies
-          run: dotnet restore
+            - name: Install dependencies
+              run: dotnet restore
 
-        - name: Restore Nuget Packages
-          run: nuget restore FractalService.sln
+            - name: Restore Nuget Packages
+              run: nuget restore FractalService.sln
 
-        - name: Build FractalService Solution
-          run: msbuild FractalService.sln -p:Configuration=Release
+            - name: Build FractalService Solution
+              run: msbuild FractalService.sln -p:Configuration=Release
 
-      - name: Install & Start Windows Service
-        run: | 
-          cmd.exe /c 'sc.exe Create "Fractal" binPath="D:\a\windows-service\windows-service\FractalService\bin\Release\FractalService.exe" start="auto"' && 
-          cmd.exe /c 'sc.exe description "Fractal" "Fractal Service"' &&
-          sc.exe Start 'Fractal'
-           
+            - name: Install & Start Windows Service
+              run: |
+                  cmd.exe /c 'sc.exe Create "Fractal" binPath="D:\a\windows-service\windows-service\FractalService\bin\Release\FractalService.exe" start="auto"' && 
+                  cmd.exe /c 'sc.exe description "Fractal" "Fractal Service"' &&
+                  sc.exe Start 'Fractal'
