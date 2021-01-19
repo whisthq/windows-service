@@ -69,14 +69,14 @@ jobs:
               run: |
                   if [ "${GITHUB_REF##*/}" == "master" ]; then
                     curl -X POST \
-                    --data-urlencode "payload={\"channel\": \"#alerts\", \"username\": \"Sentry\", \"text\": \"Windows-Service Sentry Releases Pushed to Production with Environment `production`.\", \"icon_emoji\": \":sentry:\"}" \
+                    --data-urlencode "payload={\"channel\": \"#alerts\", \"username\": \"Sentry\", \"text\": \"Windows Service Sentry Releases Pushed to Production with Environment `production`.\", \"icon_emoji\": \":sentry:\"}" \
                     ${{ secrets.SLACK_HOOKS_ENDPOINT }}
                   elif [ "${GITHUB_REF##*/}" == "staging" ]; then
                     curl -X POST \
-                    --data-urlencode "payload={\"channel\": \"#alerts\", \"username\": \"Sentry\", \"text\": \"Windows-Service Sentry Releases Pushed to Staging with Environment `staging`.\", \"icon_emoji\": \":sentry:\"}" \
+                    --data-urlencode "payload={\"channel\": \"#alerts\", \"username\": \"Sentry\", \"text\": \"Windows Service Sentry Releases Pushed to Staging with Environment `staging`.\", \"icon_emoji\": \":sentry:\"}" \
                     ${{ secrets.SLACK_HOOKS_ENDPOINT }}
                   else
                     curl -X POST \
-                    --data-urlencode "payload={\"channel\": \"#alerts\", \"username\": \"Sentry\", \"text\": \"Windows-Service Sentry Releases Pushed to Development with Environment `dev`.\", \"icon_emoji\": \":sentry:\"}" \
+                    --data-urlencode "payload={\"channel\": \"#alerts\", \"username\": \"Sentry\", \"text\": \"Windows Service Sentry Releases Pushed to Development with Environment `dev`.\", \"icon_emoji\": \":sentry:\"}" \
                     ${{ secrets.SLACK_HOOKS_ENDPOINT }}
                   fi
