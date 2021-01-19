@@ -58,25 +58,25 @@ jobs:
                   # Create new deploy for this Sentry release
                   sentry-cli releases deploys $SENTRY_RELEASE new -e $SENTRY_DEPLOY_ENVIRONMENT
 
-        notify-slack:
-            name: Notify Slack
-            needs: [push-sentry-release-main]
-            if: success()
-            runs-on: ubuntu-20.04
+    notify-slack:
+        name: Notify Slack
+        needs: [push-sentry-release-main]
+        if: success()
+        runs-on: ubuntu-20.04
 
-            steps:
-                - name: Notify Slack
-                  run: |
-                      if [ "${GITHUB_REF##*/}" == "master" ]; then
-                        curl -X POST \
-                        --data-urlencode "payload={\"channel\": \"#alerts\", \"username\": \"Sentry\", \"text\": \"Windows-Service Sentry Releases Pushed to Production with Environment `production`.\", \"icon_emoji\": \":sentry:\"}" \
-                        ${{ secrets.SLACK_HOOKS_ENDPOINT }}
-                      elif [ "${GITHUB_REF##*/}" == "staging" ]; then
-                        curl -X POST \
-                        --data-urlencode "payload={\"channel\": \"#alerts\", \"username\": \"Sentry\", \"text\": \"Windows-Service Sentry Releases Pushed to Staging with Environment `staging`.\", \"icon_emoji\": \":sentry:\"}" \
-                        ${{ secrets.SLACK_HOOKS_ENDPOINT }}
-                      else
-                        curl -X POST \
-                        --data-urlencode "payload={\"channel\": \"#alerts\", \"username\": \"Sentry\", \"text\": \"Windows-Service Sentry Releases Pushed to Development with Environment `dev`.\", \"icon_emoji\": \":sentry:\"}" \
-                        ${{ secrets.SLACK_HOOKS_ENDPOINT }}
-                      fi
+        steps:
+            - name: Notify Slack
+              run: |
+                  if [ "${GITHUB_REF##*/}" == "master" ]; then
+                    curl -X POST \
+                    --data-urlencode "payload={\"channel\": \"#alerts\", \"username\": \"Sentry\", \"text\": \"Windows-Service Sentry Releases Pushed to Production with Environment `production`.\", \"icon_emoji\": \":sentry:\"}" \
+                    ${{ secrets.SLACK_HOOKS_ENDPOINT }}
+                  elif [ "${GITHUB_REF##*/}" == "staging" ]; then
+                    curl -X POST \
+                    --data-urlencode "payload={\"channel\": \"#alerts\", \"username\": \"Sentry\", \"text\": \"Windows-Service Sentry Releases Pushed to Staging with Environment `staging`.\", \"icon_emoji\": \":sentry:\"}" \
+                    ${{ secrets.SLACK_HOOKS_ENDPOINT }}
+                  else
+                    curl -X POST \
+                    --data-urlencode "payload={\"channel\": \"#alerts\", \"username\": \"Sentry\", \"text\": \"Windows-Service Sentry Releases Pushed to Development with Environment `dev`.\", \"icon_emoji\": \":sentry:\"}" \
+                    ${{ secrets.SLACK_HOOKS_ENDPOINT }}
+                  fi
