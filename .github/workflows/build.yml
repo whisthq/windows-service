@@ -1,36 +1,38 @@
-# This workflow installs the .NET framework, builds the Windows Service, installs it and finally starts it
-# It tests service installation and starting, which can catch most service errors
-name: Build Windows Service
+# workflows/build.yml
+#
+# Build Windows Service
+# Automatically build the Fractal Windows Service.
+
+name: "Build Windows Service"
 
 on:
-  pull_request:
-    branches: [ master, dev ]
+  push:
+    branches:
+      - master
     paths-ignore:
     - '**/README.md'
+  workflow_dispatch:
 
 jobs:
-  s3-publish:
-      name: Build and run Windows Service
-      runs-on: windows-latest
+  build-and-installmain:
+      name: Build and Run Windows Service
+      runs-on: windows-2019
 
       steps:
-      - name: Checkout git repository
-        uses: actions/checkout@v2
-        with:
-          persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
-          fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
+        - name: Checkout Git Repository
+          uses: actions/checkout@v2
 
-      - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v1.0.2
+        - name: Add msbuild to PATH
+          uses: microsoft/setup-msbuild@v1.0.2
 
-      - name: Install dependencies
-        run: dotnet restore
+        - name: Install dependencies
+          run: dotnet restore
 
-      - name: Restore Nuget Packages
-        run: nuget restore FractalService.sln
+        - name: Restore Nuget Packages
+          run: nuget restore FractalService.sln
 
-      - name: Build FractalService Solution
-        run: msbuild FractalService.sln -p:Configuration=Release
+        - name: Build FractalService Solution
+          run: msbuild FractalService.sln -p:Configuration=Release
 
       - name: Install & Start Windows Service
         run: | 
