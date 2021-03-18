@@ -2,6 +2,8 @@
 
 ![Build Windows Service](https://github.com/fractal/windows-service/workflows/Build%20Windows%20Service/badge.svg) ![Build and Publish Windows Service](https://github.com/fractal/windows-service/workflows/Build%20and%20Publish%20Windows%20Service/badge.svg) ![Push Sentry Release](https://github.com/fractal/windows-service/workflows/Push%20Sentry%20Release/badge.svg)
 
+**THIS REPOSITORY WAS ARCHIVED FOLLOWING OUR MIGRATION TO CONTAINERS, WHICH RUN ON LINUX VMS, AS COMPARED TO OUR WINDOWS VMS INFRASTRUCTURE WHICH REQUIRED THIS SERVICE. THIS REPOSITORY IS KEPT HERE FOR REFERENCE, SHOULD WE EVER DECIDE TO SUPPORT STREAMING FROM WINDOWS CONTAINERS, WHICH MAY REQUIRE A SERVICE LIKE THIS ONE.**
+
 This repository contains the code for the Fractal Windows service, which is installed on every Fractal Windows container and runs at startup to log the computer into the console session, session 0, with Admin privileges, and start/monitor the Fractal protocol, starting/restarting it as necessary to keep it running 24/7. The service also sets high priority to the Fractal Protocol process, which ensures it does not get crowded out when a computer's resources are maximally utilized.
 
 For further documentation, check this repository's [Wiki](https://github.com/fractal/windows-service/wiki). 
@@ -34,4 +36,4 @@ Rinse and repeat until the service works the way you intend it to! Note that you
 
 ## Publishing & Continuous Integration
 
-Every push to `master` will automatically publish the new service, built with the `Release` tag, to AWS S3 and notify the team in Slack. The Windows service will then be automatically updated the next time a server update is pushed for the Fractal Protocol servers.
+Every push to `main` will automatically publish the new service, built with the `Release` tag, to AWS S3 and notify the team in Slack. The Windows service will then be automatically updated the next time a server update is pushed for the Fractal Protocol servers.
