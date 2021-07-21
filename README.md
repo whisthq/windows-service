@@ -1,6 +1,6 @@
 # Fractal Windows Service
 
-![Build Windows Service](https://github.com/fractal/windows-service/workflows/Build%20Windows%20Service/badge.svg) ![Build and Publish Windows Service](https://github.com/fractal/windows-service/workflows/Build%20and%20Publish%20Windows%20Service/badge.svg) ![Push Sentry Release](https://github.com/fractal/windows-service/workflows/Push%20Sentry%20Release/badge.svg)
+![Build Windows Service](https://github.com/fractal/windows-service/workflows/Build%20Windows%20Service/badge.svg)
 
 **THIS REPOSITORY WAS ARCHIVED FOLLOWING OUR MIGRATION TO CONTAINERS, WHICH RUN ON LINUX VMS, AS COMPARED TO OUR WINDOWS VMS INFRASTRUCTURE WHICH REQUIRED THIS SERVICE. THIS REPOSITORY IS KEPT HERE FOR REFERENCE, SHOULD WE EVER DECIDE TO SUPPORT STREAMING FROM WINDOWS CONTAINERS, WHICH MAY REQUIRE A SERVICE LIKE THIS ONE.**
 
