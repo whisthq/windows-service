@@ -6,8 +6,6 @@
 
 This repository contains the code for the Fractal Windows service, which is installed on every Fractal Windows container and runs at startup to log the computer into the console session, session 0, with Admin privileges, and start/monitor the Fractal protocol, starting/restarting it as necessary to keep it running 24/7. The service also sets high priority to the Fractal Protocol process, which ensures it does not get crowded out when a computer's resources are maximally utilized.
 
-For further documentation, check this repository's [Wiki](https://github.com/fractal/windows-service/wiki). 
-
 ## Building
 
 This project is implemented in Visual C# and requires Visual Studio with the .NET Framework 4.7+ for building. To build the code, you simply need to open the `.sln` file in Visual Studio, and then click "Build" in the top bar (Build Tab, and then Build should be the first option).
